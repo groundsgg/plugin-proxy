@@ -7,6 +7,8 @@ import io.nats.client.Nats
 import io.nats.client.Options
 import io.nats.client.Subscription
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Duration
 import org.slf4j.Logger
 
@@ -15,7 +17,7 @@ class NatsHandler(private val natsUrl: String, private val logger: Logger) : Aut
     private lateinit var dispatcher: Dispatcher
 
     fun connect() {
-        val options =
+        val builder =
             Options.Builder()
                 .server(natsUrl)
                 .connectionName("plugin-proxy")
@@ -30,8 +32,15 @@ class NatsHandler(private val natsUrl: String, private val logger: Logger) : Aut
                         else -> {}
                     }
                 }
-                .build()
-        connection = Nats.connect(options)
+        // Present the projected SA-token (audience grounds-services) as the NATS
+        // bearer for the auth-callout broker. Re-read per (re)connect for kubelet
+        // rotation; skipped when absent (local/dev without the projected volume).
+        val tokenFile = System.getenv("GROUNDS_TOKEN_FILE") ?: "/var/run/secrets/grounds/token"
+        val tokenPath = Path.of(tokenFile)
+        if (Files.exists(tokenPath)) {
+            builder.tokenSupplier { Files.readString(tokenPath).trim().toCharArray() }
+        }
+        connection = Nats.connect(builder.build())
         dispatcher = connection.createDispatcher()
         logger.info("Connected to NATS (url={})", natsUrl)
     }
