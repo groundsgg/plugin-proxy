@@ -10,16 +10,37 @@ import java.util.UUID
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 
-class ProxyServiceImpl(private val natsHandler: NatsHandler, private val proxy: ProxyServer) :
-    ProxyService {
+class ProxyServiceImpl(
+    private val natsHandler: NatsHandler,
+    private val proxy: ProxyServer,
+    private val suggestionCache: SuggestionCache = SuggestionCache(),
+) : ProxyService {
 
     private fun sessionQuery(): PlayerSessionQuery? =
         ProxyServiceRegistry.get(PlayerSessionQuery::class.java)
 
-    override fun getOnlinePlayerNames(): Collection<String> {
-        val localNames = proxy.allPlayers.map { it.username }
-        val remoteNames = sessionQuery()?.getOnlinePlayers()?.map { it.name } ?: emptyList()
-        return (localNames + remoteNames).distinct()
+    /**
+     * Local players are free — they are already in memory. The network-wide half is the expensive
+     * one, so it is only asked once the player has typed enough to narrow it down, and the answer
+     * is cached briefly: Velocity fires tab-complete on every keystroke.
+     */
+    override fun suggestPlayerNames(prefix: String, limit: Int): Collection<String> {
+        val local =
+            proxy.allPlayers
+                .map { it.username }
+                .filter { it.startsWith(prefix, ignoreCase = true) }
+                .sorted()
+        if (local.size >= limit) return local.take(limit)
+
+        val remote =
+            if (prefix.length >= MIN_REMOTE_PREFIX) {
+                suggestionCache.get(prefix) {
+                    sessionQuery()?.suggestNames(prefix, limit) ?: emptyList()
+                }
+            } else {
+                emptyList()
+            }
+        return SuggestionCache.merge(local, remote, limit)
     }
 
     override fun resolvePlayerId(name: String): UUID? {
@@ -72,5 +93,10 @@ class ProxyServiceImpl(private val natsHandler: NatsHandler, private val proxy: 
         } else {
             natsHandler.publish("proxy.transfer.$playerId", serverName)
         }
+    }
+
+    companion object {
+        /** One letter matches most of the network; make the player narrow it down first. */
+        const val MIN_REMOTE_PREFIX = 2
     }
 }
