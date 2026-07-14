@@ -32,6 +32,20 @@ interface ProxyService {
     fun getPresence(playerId: UUID): PlayerPresence?
 
     /**
+     * Players per backend server across the whole network, or null when the network cannot be
+     * asked.
+     *
+     * Velocity's own `playersConnected` only ever counts the players on *this* proxy, so with two
+     * proxies in front of one lobby each sees half of it. Anything that shows a player a number
+     * about the network has to come from here.
+     *
+     * Null rather than a proxy-local fallback on purpose: a local count is indistinguishable from a
+     * network count once it is rendered, and silently showing the wrong one is the bug this
+     * replaces. Callers should say the number is proxy-local instead.
+     */
+    fun getNetworkPlayerCounts(): NetworkPlayerCounts?
+
+    /**
      * Delivers to the player wherever they are — locally, or over NATS to the proxy holding them.
      */
     fun sendToPlayer(targetId: UUID, message: Component)
