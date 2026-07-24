@@ -2,11 +2,13 @@ package gg.grounds.proxy.velocity
 
 import com.velocitypowered.api.proxy.ProxyServer
 import gg.grounds.proxy.api.NetworkPlayerCounts
+import gg.grounds.proxy.api.NetworkProxyCounts
 import gg.grounds.proxy.api.PlayerPresence
 import gg.grounds.proxy.api.PlayerSessionQuery
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
 import gg.grounds.proxy.velocity.handler.NatsHandler
+import java.net.InetSocketAddress
 import java.util.UUID
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
@@ -87,6 +89,32 @@ class ProxyServiceImpl(
             val json = GsonComponentSerializer.gson().serialize(message)
             natsHandler.publish("proxy.system.$targetId", json)
         }
+    }
+
+    override fun getNetworkProxyCounts(): NetworkProxyCounts? =
+        sessionQuery()?.countPlayersByProxy()
+
+    override fun transferToHost(playerId: UUID, host: String, port: Int): Boolean {
+        val local = proxy.getPlayer(playerId).orElse(null)
+        if (local != null) {
+            // The client reconnects to the new address on its own and keeps its session. Nothing
+            // to await: the connection this call is running on is the one about to go away.
+            local.transferToHost(InetSocketAddress.createUnresolved(host, port))
+            return true
+        }
+        // Not here — but possibly on another proxy. Publishing is not proof of delivery; false is
+        // reserved for "nobody anywhere has them", which the session lookup can actually answer.
+        if (sessionQuery()?.getSession(playerId) == null) return false
+        natsHandler.publish("proxy.host-transfer.$playerId", "$host:$port")
+        return true
+    }
+
+    override fun drainToHost(host: String, port: Int): Int {
+        val address = InetSocketAddress.createUnresolved(host, port)
+        // Snapshot first: transferring mutates allPlayers while we walk it.
+        val players = proxy.allPlayers.toList()
+        players.forEach { it.transferToHost(address) }
+        return players.size
     }
 
     override fun transferPlayer(playerId: UUID, serverName: String) {

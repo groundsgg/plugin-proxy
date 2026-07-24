@@ -50,10 +50,43 @@ interface ProxyService {
      */
     fun sendToPlayer(targetId: UUID, message: Component)
 
+    /**
+     * Players per proxy across the network, with each proxy's region, or null when the network
+     * cannot be asked. Same null contract as [getNetworkPlayerCounts]: do not substitute local
+     * numbers.
+     */
+    fun getNetworkProxyCounts(): NetworkProxyCounts?
+
     /** Moves the player to [serverName], including when they are connected to another proxy. */
     fun transferPlayer(playerId: UUID, serverName: String)
 
+    /**
+     * Sends the player to a different *proxy* — a different address entirely, not a backend server
+     * behind this one.
+     *
+     * This is the Minecraft transfer packet: the client disconnects and reconnects to [host] by
+     * itself, keeping the session, so the player sees a load screen rather than "you have been
+     * disconnected". It is what moves someone between regions, and what empties a proxy before it
+     * is taken down.
+     *
+     * Works for a player on another proxy too — the request travels over NATS to whichever proxy
+     * holds them, exactly like [transferPlayer].
+     *
+     * Returns false only when the player is not online anywhere. A transfer that reaches the client
+     * and fails there cannot be observed from here; the client falls back to the server list.
+     */
+    fun transferToHost(playerId: UUID, host: String, port: Int = DEFAULT_MINECRAFT_PORT): Boolean
+
+    /**
+     * Transfers every player on *this* proxy to [host], and returns how many were sent.
+     *
+     * Deliberately local: draining means emptying the proxy you are draining, and a call that could
+     * empty someone else's is a foot-gun with no use case. Run it on each proxy you want emptied.
+     */
+    fun drainToHost(host: String, port: Int = DEFAULT_MINECRAFT_PORT): Int
+
     companion object {
         const val DEFAULT_SUGGESTION_LIMIT = 20
+        const val DEFAULT_MINECRAFT_PORT = 25565
     }
 }
