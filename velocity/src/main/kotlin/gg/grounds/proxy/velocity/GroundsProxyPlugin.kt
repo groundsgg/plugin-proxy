@@ -5,6 +5,7 @@ import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.PostLoginEvent
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
+import com.velocitypowered.api.event.proxy.ProxyPingEvent
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.ProxyServer
@@ -23,6 +24,31 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import org.slf4j.Logger
 
+/**
+ * Where service-player publishes the network-wide player count. Not scoped per environment or
+ * region: every proxy on this NATS wants the same number, and the leaf topology already decides who
+ * can hear it.
+ */
+private const val PLAYER_COUNTS_SUBJECT = "proxy.player-counts"
+
+/**
+ * Reads `{"total":N}`.
+ *
+ * One integer out of one flat object does not justify a JSON dependency in a plugin shaded into
+ * every proxy, and a reader that returns null on anything it does not recognise is easier to reason
+ * about here than a permissive parser. Null means "keep the previous value", which is the same
+ * thing a missed broadcast means.
+ */
+internal fun parsePlayerCount(payload: String): Int? {
+    val marker = "\"total\""
+    val at = payload.indexOf(marker)
+    if (at < 0) return null
+    val colon = payload.indexOf(':', at + marker.length)
+    if (colon < 0) return null
+    val digits = payload.drop(colon + 1).trimStart().takeWhile { it.isDigit() }
+    return digits.toIntOrNull()?.takeIf { it >= 0 }
+}
+
 @Plugin(id = "plugin-proxy", name = "GroundsProxyPlugin", version = BuildInfo.VERSION)
 class GroundsProxyPlugin
 @Inject
@@ -31,6 +57,17 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private val systemSubscriptions = ConcurrentHashMap<UUID, Subscription>()
     private val transferSubscriptions = ConcurrentHashMap<UUID, Subscription>()
     private val hostTransferSubscriptions = ConcurrentHashMap<UUID, Subscription>()
+
+    /**
+     * The last network-wide player count service-player published, or null until the first one
+     * arrives.
+     *
+     * Null is not zero, and the ping handler treats it that way: before the first broadcast we let
+     * Velocity report its own count rather than claim an empty network. Volatile because it is
+     * written on a NATS dispatcher thread and read on whichever thread answers a ping.
+     */
+    @Volatile private var networkPlayerCount: Int? = null
+    private var countSubscription: Subscription? = null
 
     @Subscribe
     fun onInitialize(event: ProxyInitializeEvent) {
@@ -63,10 +100,40 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             ),
         )
 
+        // The network-wide player count, pushed every few seconds. Subscribed once for the whole
+        // proxy rather than per player: it is a property of the network, not of anybody's session.
+        countSubscription =
+            natsHandler.subscribe(PLAYER_COUNTS_SUBJECT) { payload ->
+                val parsed = parsePlayerCount(payload)
+                if (parsed == null) {
+                    logger.warn("Ignoring malformed player-count broadcast: {}", payload)
+                } else {
+                    networkPlayerCount = parsed
+                }
+            }
+
         // Subscribe existing players for system/transfer messages
         proxy.allPlayers.forEach { subscribeForPlayer(it.uniqueId) }
 
         logger.info("plugin-proxy enabled (nats={})", natsUrl)
+    }
+
+    /**
+     * The player count in the server list, which Velocity would otherwise fill with the players on
+     * *this* proxy — half the network once there are two of them, and plausible-looking while
+     * wrong.
+     *
+     * Answered from the cached broadcast, never by asking anything: a ping arrives whenever anyone
+     * opens their server list, so this path has to be free.
+     *
+     * Only the online count is touched. The MOTD and icon belong to plugin-grounds-platform, which
+     * subscribes to the same event — Velocity gives each subscriber the result of the last, so both
+     * survive.
+     */
+    @Subscribe
+    fun onProxyPing(event: ProxyPingEvent) {
+        val count = networkPlayerCount ?: return
+        event.ping = event.ping.asBuilder().onlinePlayers(count).build()
     }
 
     @Subscribe
@@ -82,6 +149,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     @Subscribe
     fun onShutdown(event: ProxyShutdownEvent) {
         ProxyServiceRegistry.unregister(ProxyService::class.java)
+        countSubscription?.let { natsHandler.unsubscribe(it) }
         if (this::natsHandler.isInitialized) {
             natsHandler.close()
         }
