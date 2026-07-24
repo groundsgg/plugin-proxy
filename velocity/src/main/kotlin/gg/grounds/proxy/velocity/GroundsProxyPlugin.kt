@@ -11,8 +11,11 @@ import com.velocitypowered.api.proxy.ProxyServer
 import gg.grounds.BuildInfo
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
+import gg.grounds.proxy.velocity.command.OnlineCommand
+import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import io.nats.client.Subscription
+import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import net.kyori.adventure.text.Component
@@ -27,6 +30,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private lateinit var natsHandler: NatsHandler
     private val systemSubscriptions = ConcurrentHashMap<UUID, Subscription>()
     private val transferSubscriptions = ConcurrentHashMap<UUID, Subscription>()
+    private val hostTransferSubscriptions = ConcurrentHashMap<UUID, Subscription>()
 
     @Subscribe
     fun onInitialize(event: ProxyInitializeEvent) {
@@ -37,6 +41,27 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
         val proxyServiceImpl = ProxyServiceImpl(natsHandler, proxy)
         ProxyServiceRegistry.register(ProxyService::class.java, proxyServiceImpl)
+
+        val catalog = RegionCatalog.fromEnvironment()
+        catalog.problems.forEach { logger.warn("Ignoring REGIONS entry: {}", it) }
+        if (catalog.regions.isEmpty()) {
+            logger.info("REGIONS is unset or empty; /region will have nothing to offer")
+        } else {
+            logger.info("Regions available: {}", catalog.codes.joinToString(", "))
+        }
+
+        // Looked up per invocation rather than captured: the registry is written during startup and
+        // a reference taken now could be the one from before another plugin registered.
+        val service = { ProxyServiceRegistry.get(ProxyService::class.java) }
+        proxy.commandManager.register("online", OnlineCommand(service))
+        proxy.commandManager.register(
+            "region",
+            RegionCommand(
+                catalog,
+                { System.getenv("REGION")?.trim()?.takeIf(String::isNotEmpty) },
+                service,
+            ),
+        )
 
         // Subscribe existing players for system/transfer messages
         proxy.allPlayers.forEach { subscribeForPlayer(it.uniqueId) }
@@ -88,10 +113,30 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 }
             }
         transferSubscriptions[playerId] = transferSub
+
+        // A transfer to a different *proxy*, published by whichever proxy ran the command. The
+        // player is on this one, so this is where the packet has to be sent from.
+        val hostSub =
+            natsHandler.subscribe("proxy.host-transfer.$playerId") { target ->
+                val player = proxy.getPlayer(playerId).orElse(null) ?: return@subscribe
+                val host = target.substringBeforeLast(':', target)
+                val port = target.substringAfterLast(':', "").toIntOrNull()
+                if (host.isBlank() || port == null) {
+                    logger.warn(
+                        "Ignoring malformed host-transfer target '{}' for {}",
+                        target,
+                        playerId,
+                    )
+                    return@subscribe
+                }
+                player.transferToHost(InetSocketAddress.createUnresolved(host, port))
+            }
+        hostTransferSubscriptions[playerId] = hostSub
     }
 
     private fun cleanupPlayer(playerId: UUID) {
         systemSubscriptions.remove(playerId)?.let { natsHandler.unsubscribe(it) }
         transferSubscriptions.remove(playerId)?.let { natsHandler.unsubscribe(it) }
+        hostTransferSubscriptions.remove(playerId)?.let { natsHandler.unsubscribe(it) }
     }
 }
