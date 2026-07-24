@@ -23,6 +23,26 @@ interface PlayerSessionQuery {
      * 10k players online. Implementations clamp [limit] themselves.
      */
     fun suggestNames(prefix: String, limit: Int): List<String>
+
+    /**
+     * How many players are on each backend server, across every proxy.
+     *
+     * Null when the network cannot be asked (no presence backend reachable). Callers must not
+     * quietly substitute their own proxy's numbers for this — a proxy-local count *looks* like a
+     * network count and is the very thing this exists to replace.
+     */
+    fun countPlayersByServer(): NetworkPlayerCounts?
+}
+
+/**
+ * A snapshot of who is online network-wide.
+ *
+ * [byServer] holds one entry per *occupied* backend server; a server nobody is on is absent rather
+ * than zero. [total] counts everyone online, including players who have not reached a backend
+ * server yet, so it can exceed the sum of [byServer].
+ */
+data class NetworkPlayerCounts(val byServer: Map<String, Int>, val total: Int) {
+    fun on(serverName: String): Int = byServer[serverName] ?: 0
 }
 
 data class PlayerSessionInfo(

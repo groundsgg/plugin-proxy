@@ -1,6 +1,7 @@
 package gg.grounds.proxy.velocity
 
 import com.velocitypowered.api.proxy.ProxyServer
+import gg.grounds.proxy.api.NetworkPlayerCounts
 import gg.grounds.proxy.api.PlayerPresence
 import gg.grounds.proxy.api.PlayerSessionQuery
 import gg.grounds.proxy.api.ProxyService
@@ -74,6 +75,9 @@ class ProxyServiceImpl(
             joinedAt = session.connectedAt,
         )
     }
+
+    override fun getNetworkPlayerCounts(): NetworkPlayerCounts? =
+        sessionQuery()?.countPlayersByServer()
 
     override fun sendToPlayer(targetId: UUID, message: Component) {
         val local = proxy.getPlayer(targetId).orElse(null)
