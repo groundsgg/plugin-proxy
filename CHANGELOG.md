@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/groundsgg/plugin-proxy/compare/v0.3.0...v0.4.0) (2026-07-24)
+
+
+### Features
+
+* **proxy:** show the network player count in the server list ([#19](https://github.com/groundsgg/plugin-proxy/issues/19)) ([9b2cc3f](https://github.com/groundsgg/plugin-proxy/commit/9b2cc3f07261d56da79be83f7a8c31ff66a94b38))
+
 ## [0.3.0](https://github.com/groundsgg/plugin-proxy/compare/v0.2.0...v0.3.0) (2026-07-24)
 
 
