@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/groundsgg/plugin-proxy/compare/v0.4.0...v0.5.0) (2026-07-30)
+
+
+### Features
+
+* **api:** add PlayerLocaleQuery for cross-plugin language lookup ([#21](https://github.com/groundsgg/plugin-proxy/issues/21)) ([d3bbdf8](https://github.com/groundsgg/plugin-proxy/commit/d3bbdf8964f54976836abbe826a908d8e5a70418))
+
 ## [0.4.0](https://github.com/groundsgg/plugin-proxy/compare/v0.3.0...v0.4.0) (2026-07-24)
 
 
