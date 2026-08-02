@@ -14,10 +14,14 @@ repositories {
 
 dependencies {
     implementation(project(":api"))
+    implementation(project(":grpc"))
     // The tab list header and footer are player-facing text, so they come from a bundle and are
     // drawn in the design tokens, like every other line the network shows a player.
     implementation("gg.grounds:library-i18n:0.2.0")
     implementation("io.nats:jnats:2.26.0")
+    // The transport for the service-config channel. Shaded by gRPC itself, so it does not fight
+    // with the Netty the proxy runs on.
+    implementation("io.grpc:grpc-netty-shaded:1.78.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.13.4")
     // Adventure reaches the plugin through Velocity at runtime, which is compileOnly here and so
@@ -25,6 +29,11 @@ dependencies {
     testImplementation("net.kyori:adventure-api:4.21.0")
     testImplementation("net.kyori:adventure-text-minimessage:4.21.0")
     testImplementation("net.kyori:adventure-text-serializer-plain:4.21.0")
+    // Same reason, for the MOTD: the section codes a motd.gg import arrives in, the JSON the
+    // stored document is, and the logger the manager reports a failed refresh through.
+    testImplementation("net.kyori:adventure-text-serializer-legacy:4.21.0")
+    testImplementation("com.google.code.gson:gson:2.11.0")
+    testImplementation("org.slf4j:slf4j-api:2.0.17")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.13.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.13.4")
 }

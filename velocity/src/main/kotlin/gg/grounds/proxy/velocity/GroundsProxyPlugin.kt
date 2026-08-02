@@ -17,15 +17,20 @@ import gg.grounds.proxy.api.PlayerLocaleQuery
 import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
+import gg.grounds.proxy.velocity.command.MotdCommand
 import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
+import gg.grounds.proxy.velocity.motd.MotdConfigStore
+import gg.grounds.proxy.velocity.motd.MotdGgClient
+import gg.grounds.proxy.velocity.motd.MotdManager
 import gg.grounds.proxy.velocity.tab.TabList
 import io.nats.client.Subscription
 import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import net.kyori.adventure.identity.Identity
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -46,6 +51,15 @@ private const val PLAYER_COUNTS_SUBJECT = "proxy.player-counts"
  * bad shows up while the player is still wondering why.
  */
 private const val TAB_REFRESH_SECONDS = 5L
+
+/**
+ * Which service-config application the MOTD document belongs to.
+ *
+ * Every proxy in every region reads and writes the same one, which is the point: the MOTD is a
+ * property of the network. It is deliberately not the release name — `velocity` and `velocity-2`
+ * are two deployments of one thing, and they must not end up with a MOTD each.
+ */
+private const val DEFAULT_CONFIG_APP = "velocity"
 
 /**
  * Reads `{"total":N}`.
@@ -86,6 +100,13 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private var countSubscription: Subscription? = null
     private var tabList: TabList? = null
 
+    /**
+     * The network-wide MOTD, or null when this proxy has no service-config to read it from. Null
+     * disables `/motd` entirely rather than offering a command that cannot store anything.
+     */
+    @Volatile private var motdManager: MotdManager? = null
+    private var motdStore: MotdConfigStore? = null
+
     @Subscribe
     fun onInitialize(event: ProxyInitializeEvent) {
         val natsUrl = System.getenv("NATS_URL") ?: "nats://nats.infra:4222"
@@ -123,6 +144,8 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 }
             }
 
+        startMotd()
+
         // Subscribe existing players for system/transfer messages
         proxy.allPlayers.forEach { subscribeForPlayer(it.uniqueId) }
 
@@ -157,21 +180,104 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     }
 
     /**
+     * Brings up the network-wide MOTD, if this deployment has a service-config to keep it in.
+     *
+     * Without `CONFIG_GRPC_TARGET` the whole feature stays off and Velocity's own MOTD is served —
+     * the same thing that happened before there was a `/motd`. That is the right shape for a
+     * per-engineer proxy or a local run, where there is no config service to talk to.
+     */
+    private fun startMotd() {
+        val target = env("CONFIG_GRPC_TARGET")
+        if (target == null) {
+            logger.info("MOTD disabled (reason=CONFIG_GRPC_TARGET_unset)")
+            return
+        }
+        val app = env("CONFIG_APP") ?: DEFAULT_CONFIG_APP
+        // The environment the permission grants already name, so a deployment that has decided
+        // what it is called does not have to say it twice.
+        val configEnv = env("CONFIG_ENV") ?: env("GROUNDS_PERMISSION_ENVIRONMENT")
+        if (configEnv == null) {
+            logger.warn(
+                "MOTD disabled (reason=CONFIG_ENV_and_GROUNDS_PERMISSION_ENVIRONMENT_unset)"
+            )
+            return
+        }
+
+        val store = MotdConfigStore.open(app, configEnv, target)
+        val manager =
+            MotdManager(
+                store = store,
+                region = env("REGION"),
+                continent = env("CONTINENT"),
+                logger = logger,
+            )
+        motdStore = store
+        motdManager = manager
+
+        val refreshSeconds = env("MOTD_REFRESH_SECONDS")?.toLongOrNull()?.takeIf { it > 0 } ?: 15L
+        proxy.scheduler
+            .buildTask(this, Runnable { manager.refresh() })
+            .repeat(refreshSeconds, TimeUnit.SECONDS)
+            .schedule()
+
+        proxy.commandManager.register(
+            "motd",
+            MotdCommand(
+                manager = manager,
+                motdGg = MotdGgClient("plugin-proxy/${BuildInfo.VERSION} (+https://grounds.gg)"),
+                async = { task -> proxy.scheduler.buildTask(this, task).schedule() },
+                counts = {
+                    MotdCommand.Counts(
+                        players = networkPlayerCount ?: proxy.playerCount,
+                        maxPlayers = manager.maxPlayers() ?: proxy.configuration.showMaxPlayers,
+                    )
+                },
+            ),
+        )
+
+        logger.info(
+            "MOTD enabled (app={}, env={}, target={}, refreshSeconds={})",
+            app,
+            configEnv,
+            target,
+            refreshSeconds,
+        )
+    }
+
+    private fun env(name: String): String? = System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }
+
+    /**
      * The player count in the server list, which Velocity would otherwise fill with the players on
      * *this* proxy — half the network once there are two of them, and plausible-looking while
      * wrong.
      *
-     * Answered from the cached broadcast, never by asking anything: a ping arrives whenever anyone
-     * opens their server list, so this path has to be free.
+     * Answered from what is already in memory, never by asking anything: a ping arrives whenever
+     * anyone opens their server list, so this path has to be free. The count comes from the cached
+     * broadcast and the MOTD from the cached document, both refreshed elsewhere.
      *
-     * Only the online count is touched. The MOTD and icon belong to plugin-grounds-platform, which
-     * subscribes to the same event — Velocity gives each subscriber the result of the last, so both
-     * survive.
+     * The icon is left alone. On a per-project deployment plugin-grounds-platform subscribes to
+     * this same event and sets the icon and its own project MOTD — Velocity hands each subscriber
+     * the result of the last, so whichever runs second wins the description. The two do not meet on
+     * the player-facing network, where that plugin is not installed, and where a project name would
+     * be the wrong thing to show anyway.
      */
     @Subscribe
     fun onProxyPing(event: ProxyPingEvent) {
-        val count = networkPlayerCount ?: return
-        event.ping = event.ping.asBuilder().onlinePlayers(count).build()
+        val count = networkPlayerCount
+        val motd = motdManager
+        if (count == null && motd == null) return
+
+        val builder = event.ping.asBuilder()
+        count?.let { builder.onlinePlayers(it) }
+        motd?.let { manager ->
+            manager.maxPlayers()?.let { builder.maximumPlayers(it) }
+            // The numbers this very ping is about to report, so a MOTD that mentions them cannot
+            // disagree with the pair printed next to it.
+            manager.render(builder.onlinePlayers, builder.maximumPlayers)?.let {
+                builder.description(it)
+            }
+        }
+        event.ping = builder.build()
     }
 
     @Subscribe
@@ -198,6 +304,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     fun onShutdown(event: ProxyShutdownEvent) {
         ProxyServiceRegistry.unregister(ProxyService::class.java)
         countSubscription?.let { natsHandler.unsubscribe(it) }
+        motdStore?.close()
         if (this::natsHandler.isInitialized) {
             natsHandler.close()
         }

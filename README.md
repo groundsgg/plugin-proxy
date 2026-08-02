@@ -66,13 +66,72 @@ Shading `plugin-proxy-api` gives your plugin its own copy of the registry class 
 
 `suggestPlayerNames(prefix, limit)` is a prefix search with a cap, and there is deliberately **no** "give me every online player". Velocity fires tab-complete on *every keystroke*: at 10k players online, a roster dump is a ~200 KB response issued thousands of times a second, with a table scan behind each one. So: local matches from memory, the network only once the prefix is ≥ 2 characters, answers cached 2s per prefix, result capped (default 20).
 
+## The network MOTD
+
+`/motd` changes what the whole network shows in the server list. The MOTD is stored in
+**service-config** as one document (`app=velocity`, `namespace=motd`, `key=active`), so it survives
+restarts, applies to every region including ones that come up later, and is the same document a
+dashboard will edit later — nothing here is only true in-game.
+
+```
+/motd                        show what is being served, with the placeholders resolved
+/motd set <MiniMessage>      change it; <newline> starts the second line
+/motd import <link|id>       take a design from motd.gg
+/motd maxplayers <n|clear>   the number right of the slash
+/motd preview [MiniMessage]  render it to yourself, change nothing
+/motd reset                  remove it; Velocity's own MOTD is served again
+```
+
+Gated on `grounds.motd.manage`, which is **not** one of the roles forge grants by default — grant it
+to a custom role, the same way in-game administration is granted.
+
+### Placeholders
+
+Resolved per ping, so one stored MOTD reads differently depending on which region answered.
+
+| token | value |
+|---|---|
+| `{{region}}` | `REGION` — the datacentre (`nl-ams1`) |
+| `{{localzone}}`, `{{continent}}` | `CONTINENT` — `eu` / `na` |
+| `{{players}}` | the network-wide player count this ping reports |
+| `{{max}}` | the player cap this ping reports |
+
+A known token with no value renders as nothing; an *unknown* one is left standing, so a typo shows
+up in the server list instead of disappearing.
+
+### motd.gg import
+
+[motd.gg](https://motd.gg) is a MOTD editor with a live server-list preview. Design there, then
+`/motd import https://motd.gg/<id>` — the id, the link and the `.json` all work. Only the read half
+of motd.gg's own plugin is mirrored: nothing is uploaded, so importing does not publish this
+network's MOTD anywhere. A server icon in the imported document is reported and **not** applied —
+the network icon is brand, served from the CDN.
+
+### How it propagates
+
+Every proxy polls `GetSnapshot`-style reads every `MOTD_REFRESH_SECONDS`; service-config's own
+contract makes the read the source of truth and its NATS event only a latency hint, so subscribing
+as well would buy seconds in exchange for a second way for the two to disagree. Whoever runs
+`/motd set` sees it immediately on their own proxy; the rest follow within one interval. A refresh
+that fails keeps the previous MOTD rather than emptying every region's server-list entry at once.
+
+Writes go to `ConfigAdminService`, which service-config restricts to admin service accounts and to
+writers explicitly allowed for the app — see `GROUNDS_CONFIG_WRITERS` there. A proxy that is not
+allowed can still *show* the MOTD; `/motd set` then reports the refusal instead of failing silently.
+
 ## Configuration
 
 | env | meaning |
 |---|---|
 | `NATS_URL` | broker for `proxy.system.*` / `proxy.transfer.*` (default `nats://nats.infra:4222`) |
 | `PROXY_ID` | this proxy's identity, recorded in a player's session — must differ per proxy (`velocity`, `velocity-2`) |
-| `GROUNDS_TOKEN_FILE` | projected SA-token presented as the NATS bearer (default `/var/run/secrets/grounds/token`) |
+| `GROUNDS_TOKEN_FILE` | projected SA-token, presented as the NATS bearer and as the service-config gRPC bearer (default `/var/run/secrets/grounds/token`) |
+| `CONFIG_GRPC_TARGET` | service-config, e.g. `service-config:9000`. **Unset disables `/motd` entirely** and Velocity's own MOTD is served |
+| `CONFIG_ENV` | which environment's document to use; falls back to `GROUNDS_PERMISSION_ENVIRONMENT` |
+| `CONFIG_APP` | which service-config app holds it (default `velocity` — deliberately not the release name, so `velocity` and `velocity-2` share one MOTD) |
+| `MOTD_REFRESH_SECONDS` | how often each proxy re-reads it (default `15`) |
+| `REGION` | `{{region}}`, and the region `/region` considers "here" |
+| `CONTINENT` | `{{localzone}}` / `{{continent}}` |
 
 The NATS auth-callout scopes each pod to the subjects declared in its bundle `events:` block, so `proxy.system.*` and `proxy.transfer.*` must be listed there — an undeclared subject is denied and the message vanishes.
 

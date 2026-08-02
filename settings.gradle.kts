@@ -16,4 +16,4 @@ pluginManagement {
 
 rootProject.name = "plugin-proxy"
 
-include("api", "velocity")
+include("api", "grpc", "velocity")
