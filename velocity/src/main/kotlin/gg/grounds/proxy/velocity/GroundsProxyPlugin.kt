@@ -10,6 +10,7 @@ import com.velocitypowered.api.event.proxy.ProxyPingEvent
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.ProxyServer
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.LocaleResolver
 import gg.grounds.i18n.Translations
@@ -21,6 +22,7 @@ import gg.grounds.proxy.velocity.command.MotdCommand
 import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
+import gg.grounds.proxy.velocity.listener.LobbyCountsListener
 import gg.grounds.proxy.velocity.motd.MotdConfigStore
 import gg.grounds.proxy.velocity.motd.MotdGgClient
 import gg.grounds.proxy.velocity.motd.MotdManager
@@ -131,6 +133,13 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         val region = { System.getenv("REGION")?.trim()?.takeIf(String::isNotEmpty) }
         proxy.commandManager.register("online", OnlineCommand(service))
         proxy.commandManager.register("region", RegionCommand(catalog, region, service))
+
+        // How many players each server holds, answered to a backend that asks. Registered here
+        // rather than in the lobby's own plugin because the number only exists on this side:
+        // Velocity's own count is per proxy, and ProxyService is what makes it network-wide.
+        val lobbyIdentifier = MinecraftChannelIdentifier.from(LobbyCountsListener.CHANNEL_ID)
+        proxy.channelRegistrar.register(lobbyIdentifier)
+        proxy.eventManager.register(this, LobbyCountsListener(lobbyIdentifier, service, logger))
 
         // The network-wide player count, pushed every few seconds. Subscribed once for the whole
         // proxy rather than per player: it is a property of the network, not of anybody's session.
