@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/groundsgg/plugin-proxy/compare/v0.8.0...v1.0.0) (2026-08-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **proxy:** the proxy.* subjects and their payload format change. A proxy on the previous version neither receives nor is reachable by one on this.
+
+### Code Refactoring
+
+* **proxy:** address cross-proxy messages by proxy, not by player ([#29](https://github.com/groundsgg/plugin-proxy/issues/29)) ([0b56dc3](https://github.com/groundsgg/plugin-proxy/commit/0b56dc3dbb27d86f1011605a17cddb70ec453e87))
+
 ## [0.8.0](https://github.com/groundsgg/plugin-proxy/compare/v0.7.0...v0.8.0) (2026-08-02)
 
 
