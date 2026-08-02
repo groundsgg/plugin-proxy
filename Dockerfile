@@ -24,11 +24,16 @@ COPY gradle/ gradle/
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 
 COPY api/ api/
+COPY grpc/ grpc/
 COPY velocity/ velocity/
 
-# `:velocity:build` produces the shaded plugin JAR (the api module and the
-# NATS client are bundled into it — the proxy plugin owns the
-# ProxyServiceRegistry that plugin-chat resolves at runtime).
+# `:velocity:build` produces the shaded plugin JAR (the api module, the NATS
+# client and the generated service-config stubs are bundled into it — the proxy
+# plugin owns the ProxyServiceRegistry that plugin-chat resolves at runtime).
+#
+# Every module `settings.gradle.kts` includes has to be copied above: Gradle
+# fails configuration on an included project with no directory, and the failure
+# names the module rather than the missing COPY.
 RUN --mount=type=secret,id=github_token,required=true \
     /bin/sh -euc '\
       : "${GITHUB_USER:?GITHUB_USER build arg is required}"; \
