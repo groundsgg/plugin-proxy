@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/groundsgg/plugin-proxy/compare/v0.7.0...v0.8.0) (2026-08-02)
+
+
+### Features
+
+* **lobby:** answer a backend asking for network player counts ([#27](https://github.com/groundsgg/plugin-proxy/issues/27)) ([8092587](https://github.com/groundsgg/plugin-proxy/commit/8092587cf24c62ffc62f9eff6637902c640e8906))
+
 ## [0.7.0](https://github.com/groundsgg/plugin-proxy/compare/v0.6.0...v0.7.0) (2026-08-02)
 
 
