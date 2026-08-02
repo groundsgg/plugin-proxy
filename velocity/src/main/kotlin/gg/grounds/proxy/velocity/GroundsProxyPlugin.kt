@@ -4,21 +4,29 @@ import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.PostLoginEvent
+import com.velocitypowered.api.event.player.ServerPostConnectEvent
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
 import com.velocitypowered.api.event.proxy.ProxyPingEvent
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.ProxyServer
 import gg.grounds.BuildInfo
+import gg.grounds.i18n.LocaleResolver
+import gg.grounds.i18n.Translations
+import gg.grounds.proxy.api.PlayerLocaleQuery
+import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
 import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
+import gg.grounds.proxy.velocity.tab.TabList
 import io.nats.client.Subscription
 import java.net.InetSocketAddress
+import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import net.kyori.adventure.identity.Identity
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
@@ -30,6 +38,14 @@ import org.slf4j.Logger
  * can hear it.
  */
 private const val PLAYER_COUNTS_SUBJECT = "proxy.player-counts"
+
+/**
+ * How often the tab list is redrawn.
+ *
+ * Slow enough that a few hundred players cost nothing, fast enough that a ping which has just gone
+ * bad shows up while the player is still wondering why.
+ */
+private const val TAB_REFRESH_SECONDS = 5L
 
 /**
  * Reads `{"total":N}`.
@@ -68,6 +84,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
      */
     @Volatile private var networkPlayerCount: Int? = null
     private var countSubscription: Subscription? = null
+    private var tabList: TabList? = null
 
     @Subscribe
     fun onInitialize(event: ProxyInitializeEvent) {
@@ -90,15 +107,9 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         // Looked up per invocation rather than captured: the registry is written during startup and
         // a reference taken now could be the one from before another plugin registered.
         val service = { ProxyServiceRegistry.get(ProxyService::class.java) }
+        val region = { System.getenv("REGION")?.trim()?.takeIf(String::isNotEmpty) }
         proxy.commandManager.register("online", OnlineCommand(service))
-        proxy.commandManager.register(
-            "region",
-            RegionCommand(
-                catalog,
-                { System.getenv("REGION")?.trim()?.takeIf(String::isNotEmpty) },
-                service,
-            ),
-        )
+        proxy.commandManager.register("region", RegionCommand(catalog, region, service))
 
         // The network-wide player count, pushed every few seconds. Subscribed once for the whole
         // proxy rather than per player: it is a property of the network, not of anybody's session.
@@ -114,6 +125,33 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
         // Subscribe existing players for system/transfer messages
         proxy.allPlayers.forEach { subscribeForPlayer(it.uniqueId) }
+
+        val messages =
+            Translations.forBundle(
+                "gg.grounds.proxy.messages",
+                javaClass.classLoader,
+                localeResolver =
+                    LocaleResolver { audience ->
+                        ProxyServiceRegistry.get(PlayerLocaleQuery::class.java)?.let { query ->
+                            audience.get(Identity.UUID).map(query::localeOf).orElse(null)
+                        } ?: LocaleResolver.FROM_AUDIENCE.localeOf(audience)
+                    },
+            )
+        // Looked up per call, not captured: plugin-permissions may register after this runs, and a
+        // reference taken now would stay null for the life of the proxy.
+        val tab =
+            TabList(proxy, messages, region) {
+                ProxyServiceRegistry.get(PlayerRoleQuery::class.java)
+            }
+        tabList = tab
+
+        // On a timer as well as on join: the ping and the roster both change with no event to hang
+        // off, and a footer that shows the ping from the moment you logged in is worse than none.
+        proxy.scheduler
+            .buildTask(this, Runnable { tab.refreshAll() })
+            .delay(Duration.ofSeconds(TAB_REFRESH_SECONDS))
+            .repeat(Duration.ofSeconds(TAB_REFRESH_SECONDS))
+            .schedule()
 
         logger.info("plugin-proxy enabled (nats={})", natsUrl)
     }
@@ -139,6 +177,16 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     @Subscribe
     fun onLogin(event: PostLoginEvent) {
         subscribeForPlayer(event.player.uniqueId)
+        tabList?.refresh(event.player)
+    }
+
+    /**
+     * A backend server sends its own header and footer on connect, which replaces ours. Redrawing
+     * after every switch is what keeps the network's identity on screen instead of the lobby's.
+     */
+    @Subscribe
+    fun onServerConnected(event: ServerPostConnectEvent) {
+        tabList?.refresh(event.player)
     }
 
     @Subscribe
