@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/groundsgg/plugin-proxy/compare/v0.6.0...v0.7.0) (2026-08-02)
+
+
+### Features
+
+* **proxy:** add a global /motd, stored in service-config ([#25](https://github.com/groundsgg/plugin-proxy/issues/25)) ([8100aee](https://github.com/groundsgg/plugin-proxy/commit/8100aeefa5c79ad5c78948a89364ffababcb806d))
+
 ## [0.6.0](https://github.com/groundsgg/plugin-proxy/compare/v0.5.0...v0.6.0) (2026-08-02)
 
 
