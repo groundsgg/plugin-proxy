@@ -2,13 +2,13 @@ package gg.grounds.proxy.velocity
 
 import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
-import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.PostLoginEvent
 import com.velocitypowered.api.event.player.ServerPostConnectEvent
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
 import com.velocitypowered.api.event.proxy.ProxyPingEvent
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
 import com.velocitypowered.api.plugin.Plugin
+import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
 import gg.grounds.BuildInfo
@@ -31,7 +31,6 @@ import io.nats.client.Subscription
 import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import net.kyori.adventure.identity.Identity
 import net.kyori.adventure.text.Component
@@ -86,9 +85,7 @@ class GroundsProxyPlugin
 @Inject
 constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private lateinit var natsHandler: NatsHandler
-    private val systemSubscriptions = ConcurrentHashMap<UUID, Subscription>()
-    private val transferSubscriptions = ConcurrentHashMap<UUID, Subscription>()
-    private val hostTransferSubscriptions = ConcurrentHashMap<UUID, Subscription>()
+    private val crossProxySubscriptions = mutableListOf<Subscription>()
 
     /**
      * The last network-wide player count service-player published, or null until the first one
@@ -155,8 +152,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
         startMotd()
 
-        // Subscribe existing players for system/transfer messages
-        proxy.allPlayers.forEach { subscribeForPlayer(it.uniqueId) }
+        subscribeForProxy()
 
         val messages =
             Translations.forBundle(
@@ -291,7 +287,6 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
     @Subscribe
     fun onLogin(event: PostLoginEvent) {
-        subscribeForPlayer(event.player.uniqueId)
         tabList?.refresh(event.player)
     }
 
@@ -305,70 +300,103 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     }
 
     @Subscribe
-    fun onDisconnect(event: DisconnectEvent) {
-        cleanupPlayer(event.player.uniqueId)
-    }
-
-    @Subscribe
     fun onShutdown(event: ProxyShutdownEvent) {
         ProxyServiceRegistry.unregister(ProxyService::class.java)
         countSubscription?.let { natsHandler.unsubscribe(it) }
+        crossProxySubscriptions.forEach { natsHandler.unsubscribe(it) }
+        crossProxySubscriptions.clear()
         motdStore?.close()
         if (this::natsHandler.isInitialized) {
             natsHandler.close()
         }
     }
 
-    private fun subscribeForPlayer(playerId: UUID) {
-        val sysSub =
-            natsHandler.subscribe("proxy.system.$playerId") { payload ->
-                val component = GsonComponentSerializer.gson().deserialize(payload)
-                proxy.getPlayer(playerId).orElse(null)?.sendMessage(component)
-            }
-        systemSubscriptions[playerId] = sysSub
+    /**
+     * The three cross-proxy subjects, taken once for this proxy rather than once per player.
+     *
+     * Keying by player meant the interest for every online player crossed the leafnode to the hub
+     * on each join and each leave, and a restart re-subscribed the whole roster in one burst. This
+     * is three subscriptions for the life of the process, whatever the player count does.
+     */
+    private fun subscribeForProxy() {
+        val proxyId = System.getenv("PROXY_ID")?.trim().orEmpty()
+        if (proxyId.isEmpty()) {
+            logger.error(
+                "PROXY_ID is unset; this proxy cannot be addressed by the others and will receive no cross-proxy messages"
+            )
+            return
+        }
 
-        val transferSub =
-            natsHandler.subscribe("proxy.transfer.$playerId") { serverName ->
-                val player = proxy.getPlayer(playerId).orElse(null) ?: return@subscribe
-                val server = proxy.getServer(serverName).orElse(null)
-                if (server != null) {
+        crossProxySubscriptions +=
+            natsHandler.subscribe(
+                CrossProxyMessage.subjectFor(CrossProxyMessage.SYSTEM, proxyId)
+            ) { raw ->
+                forTarget(raw, CrossProxyMessage.SYSTEM) { player, payload ->
+                    player.sendMessage(GsonComponentSerializer.gson().deserialize(payload))
+                }
+            }
+
+        crossProxySubscriptions +=
+            natsHandler.subscribe(
+                CrossProxyMessage.subjectFor(CrossProxyMessage.TRANSFER, proxyId)
+            ) { raw ->
+                forTarget(raw, CrossProxyMessage.TRANSFER) { player, serverName ->
+                    val server = proxy.getServer(serverName).orElse(null)
+                    if (server == null) {
+                        logger.warn(
+                            "Transfer target server '{}' not found for {}",
+                            serverName,
+                            player.uniqueId,
+                        )
+                        return@forTarget
+                    }
                     player.sendMessage(
                         Component.text("Folge Party-Leader zu $serverName...", NamedTextColor.GREEN)
                     )
                     player.createConnectionRequest(server).fireAndForget()
-                } else {
-                    logger.warn(
-                        "Transfer target server '{}' not found for {}",
-                        serverName,
-                        playerId,
-                    )
                 }
             }
-        transferSubscriptions[playerId] = transferSub
 
         // A transfer to a different *proxy*, published by whichever proxy ran the command. The
         // player is on this one, so this is where the packet has to be sent from.
-        val hostSub =
-            natsHandler.subscribe("proxy.host-transfer.$playerId") { target ->
-                val player = proxy.getPlayer(playerId).orElse(null) ?: return@subscribe
-                val host = target.substringBeforeLast(':', target)
-                val port = target.substringAfterLast(':', "").toIntOrNull()
-                if (host.isBlank() || port == null) {
-                    logger.warn(
-                        "Ignoring malformed host-transfer target '{}' for {}",
-                        target,
-                        playerId,
-                    )
-                    return@subscribe
+        crossProxySubscriptions +=
+            natsHandler.subscribe(
+                CrossProxyMessage.subjectFor(CrossProxyMessage.HOST_TRANSFER, proxyId)
+            ) { raw ->
+                forTarget(raw, CrossProxyMessage.HOST_TRANSFER) { player, target ->
+                    val host = target.substringBeforeLast(':', target)
+                    val port = target.substringAfterLast(':', "").toIntOrNull()
+                    if (host.isBlank() || port == null) {
+                        logger.warn(
+                            "Ignoring malformed host-transfer target '{}' for {}",
+                            target,
+                            player.uniqueId,
+                        )
+                        return@forTarget
+                    }
+                    player.transferToHost(InetSocketAddress.createUnresolved(host, port))
                 }
-                player.transferToHost(InetSocketAddress.createUnresolved(host, port))
             }
-        hostTransferSubscriptions[playerId] = hostSub
+
+        logger.info("Subscribed to cross-proxy messages (proxyId={})", proxyId)
     }
 
-    private fun cleanupPlayer(playerId: UUID) {
-        systemSubscriptions.remove(playerId)?.let { natsHandler.unsubscribe(it) }
-        transferSubscriptions.remove(playerId)?.let { natsHandler.unsubscribe(it) }
-        hostTransferSubscriptions.remove(playerId)?.let { natsHandler.unsubscribe(it) }
+    /**
+     * Runs [action] for the addressed player, if they are still here.
+     *
+     * A miss is normal rather than an error: the publisher resolved this proxy from the session
+     * table a moment ago, and the player may have left in between. That race is the price of
+     * addressing a proxy instead of a player, and quietly dropping is what the per-player subject
+     * did too once the subscription was gone.
+     */
+    private inline fun forTarget(raw: String, subject: String, action: (Player, String) -> Unit) {
+        val decoded = CrossProxyMessage.decode(raw)
+        if (decoded == null) {
+            logger.warn("Ignoring malformed cross-proxy message on {}", subject)
+            return
+        }
+        val (targetId, payload) = decoded
+        val player = proxy.getPlayer(targetId).orElse(null) ?: return
+        action(player, payload)
     }
 }
