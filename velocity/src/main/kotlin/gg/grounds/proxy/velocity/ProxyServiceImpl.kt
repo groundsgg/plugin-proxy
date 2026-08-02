@@ -87,8 +87,24 @@ class ProxyServiceImpl(
             local.sendMessage(message)
         } else {
             val json = GsonComponentSerializer.gson().serialize(message)
-            natsHandler.publish("proxy.system.$targetId", json)
+            publishToHolder(CrossProxyMessage.SYSTEM, targetId, json)
         }
+    }
+
+    /**
+     * Publishes to the proxy that holds [targetId], or drops the message if nobody does.
+     *
+     * Dropping is the honest outcome: the old per-player subject let a proxy publish into the void
+     * and call it sent. Here the absence of a session is the same answer, reached before the write
+     * instead of after it.
+     */
+    private fun publishToHolder(prefix: String, targetId: UUID, payload: String): Boolean {
+        val holder = getPresence(targetId)?.proxyId?.takeIf { it.isNotBlank() } ?: return false
+        natsHandler.publish(
+            CrossProxyMessage.subjectFor(prefix, holder),
+            CrossProxyMessage.encode(targetId, payload),
+        )
+        return true
     }
 
     override fun getNetworkProxyCounts(): NetworkProxyCounts? =
@@ -104,9 +120,7 @@ class ProxyServiceImpl(
         }
         // Not here — but possibly on another proxy. Publishing is not proof of delivery; false is
         // reserved for "nobody anywhere has them", which the session lookup can actually answer.
-        if (sessionQuery()?.getSession(playerId) == null) return false
-        natsHandler.publish("proxy.host-transfer.$playerId", "$host:$port")
-        return true
+        return publishToHolder(CrossProxyMessage.HOST_TRANSFER, playerId, "$host:$port")
     }
 
     override fun drainToHost(host: String, port: Int): Int {
@@ -123,7 +137,7 @@ class ProxyServiceImpl(
             val server = proxy.getServer(serverName).orElse(null) ?: return
             local.createConnectionRequest(server).fireAndForget()
         } else {
-            natsHandler.publish("proxy.transfer.$playerId", serverName)
+            publishToHolder(CrossProxyMessage.TRANSFER, playerId, serverName)
         }
     }
 
