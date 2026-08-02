@@ -1,5 +1,6 @@
 package gg.grounds.proxy.velocity.motd
 
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -42,11 +43,20 @@ class MotdGgClientTest {
         assertEquals("AbC123", imported.id)
     }
 
+    /**
+     * Compared as components: whether the serializer writes the hex digits upper or lower case is
+     * its business and has changed between adventure versions, and MiniMessage reads either.
+     */
     @Test
     fun `keeps hex colours`() {
         val hex = "§x§f§f§0§0§a§aWarm"
 
-        assertEquals("<#FF00AA>Warm", client.parse("AbC123", """{"text":"$hex"}""").text)
+        val imported = client.parse("AbC123", """{"text":"$hex"}""")
+
+        assertEquals(
+            MiniMessage.miniMessage().deserialize("<#ff00aa>Warm"),
+            MiniMessage.miniMessage().deserialize(imported.text),
+        )
     }
 
     @Test
