@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/groundsgg/plugin-proxy/compare/v0.5.0...v0.6.0) (2026-08-02)
+
+
+### Features
+
+* **proxy:** put the network on the tab list ([#23](https://github.com/groundsgg/plugin-proxy/issues/23)) ([443f013](https://github.com/groundsgg/plugin-proxy/commit/443f013155552b6ade29ddeb676d7113a707a9b9))
+
 ## [0.5.0](https://github.com/groundsgg/plugin-proxy/compare/v0.4.0...v0.5.0) (2026-07-30)
 
 
