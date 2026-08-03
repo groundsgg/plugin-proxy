@@ -23,6 +23,9 @@ import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import gg.grounds.proxy.velocity.listener.LobbyCountsListener
+import gg.grounds.proxy.velocity.metrics.MetricsConfig
+import gg.grounds.proxy.velocity.metrics.ProxyMetrics
+import gg.grounds.proxy.velocity.metrics.ProxySnapshot
 import gg.grounds.proxy.velocity.motd.MotdConfigStore
 import gg.grounds.proxy.velocity.motd.MotdGgClient
 import gg.grounds.proxy.velocity.motd.MotdManager
@@ -97,6 +100,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
      */
     @Volatile private var networkPlayerCount: Int? = null
     private var countSubscription: Subscription? = null
+    private var metrics: ProxyMetrics? = null
     private var tabList: TabList? = null
 
     /**
@@ -180,6 +184,8 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             .delay(Duration.ofSeconds(TAB_REFRESH_SECONDS))
             .repeat(Duration.ofSeconds(TAB_REFRESH_SECONDS))
             .schedule()
+
+        startMetrics()
 
         logger.info("plugin-proxy enabled (nats={})", natsUrl)
     }
@@ -306,9 +312,50 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         crossProxySubscriptions.forEach { natsHandler.unsubscribe(it) }
         crossProxySubscriptions.clear()
         motdStore?.close()
+        metrics?.let { runCatching { it.close() } }
+        metrics = null
         if (this::natsHandler.isInitialized) {
             natsHandler.close()
         }
+    }
+
+    /**
+     * Bring up the Prometheus endpoint, if this proxy was asked for one.
+     *
+     * A failure here does **not** stop the proxy: a proxy that cannot publish metrics is degraded,
+     * one that refuses to start because a port was taken is an outage that takes every player in
+     * the region with it. The absence alerts by itself, as a missing `up`.
+     */
+    private fun startMetrics() {
+        val config =
+            runCatching { MetricsConfig.fromEnvironment() }
+                .onFailure { failure -> logger.error("Ignoring metrics configuration", failure) }
+                .getOrNull() ?: return
+        if (!config.enabled) {
+            logger.info("Metrics endpoint disabled (set GROUNDS_METRICS_ENABLED=true to publish)")
+            return
+        }
+
+        val snapshot =
+            object : ProxySnapshot {
+                override fun playersOnline(): Int = proxy.playerCount
+
+                override fun serversRegistered(): Int = proxy.allServers.size
+
+                override fun networkPlayers(): Int? = networkPlayerCount
+            }
+
+        metrics =
+            runCatching { ProxyMetrics.start(config, snapshot, logger) }
+                .onFailure { failure ->
+                    logger.error(
+                        "Failed to start the metrics endpoint on {}:{} — continuing without it",
+                        config.host,
+                        config.port,
+                        failure,
+                    )
+                }
+                .getOrNull()
     }
 
     /**
