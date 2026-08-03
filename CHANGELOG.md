@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/groundsgg/plugin-proxy/compare/v1.0.0...v1.1.0) (2026-08-03)
+
+
+### Features
+
+* **metrics:** publish proxy metrics on a Prometheus endpoint ([#31](https://github.com/groundsgg/plugin-proxy/issues/31)) ([8889a04](https://github.com/groundsgg/plugin-proxy/commit/8889a04abe8b374424a6bcb44e84757707b861d9))
+
 ## [1.0.0](https://github.com/groundsgg/plugin-proxy/compare/v0.8.0...v1.0.0) (2026-08-02)
 
 
