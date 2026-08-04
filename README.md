@@ -8,15 +8,15 @@ A Velocity proxy only knows its own players. Ask it for `dahendriik` while they 
 
 `ProxyService`, published into the [`ProxyServiceRegistry`](api/src/main/kotlin/gg/grounds/proxy/api/ProxyServiceRegistry.kt):
 
-| method | local player | player on another proxy |
-|---|---|---|
-| `resolvePlayerId(name)` | Velocity's player list | `PlayerSessionQuery` (service-player) |
-| `resolvePlayerName(id)` | Velocity's player list | `PlayerSessionQuery` |
-| `isOnline(id)` | Velocity's player list | `PlayerSessionQuery` |
-| `getPresence(id)` | current server | session's proxy + server |
-| `sendToPlayer(id, msg)` | `player.sendMessage` | publish `proxy.system.<id>` |
-| `transferPlayer(id, server)` | connection request | publish `proxy.transfer.<id>` |
-| `suggestPlayerNames(prefix)` | filtered in memory | prefix search, capped, 2s cache |
+| method                       | local player           | player on another proxy               |
+| ---------------------------- | ---------------------- | ------------------------------------- |
+| `resolvePlayerId(name)`      | Velocity's player list | `PlayerSessionQuery` (service-player) |
+| `resolvePlayerName(id)`      | Velocity's player list | `PlayerSessionQuery`                  |
+| `isOnline(id)`               | Velocity's player list | `PlayerSessionQuery`                  |
+| `getPresence(id)`            | current server         | session's proxy + server              |
+| `sendToPlayer(id, msg)`      | `player.sendMessage`   | publish `proxy.system.<id>`           |
+| `transferPlayer(id, server)` | connection request     | publish `proxy.transfer.<id>`         |
+| `suggestPlayerNames(prefix)` | filtered in memory     | prefix search, capped, 2s cache       |
 
 Local first, always — a player on this proxy is already in memory and costs nothing to find.
 
@@ -37,7 +37,7 @@ plugin-chat / plugin-social          consumers: only ever call ProxyService
 
 Nobody registers `PlayerSessionQuery` → lookups return null and everything degrades to local-only, silently. That is exactly the state this repo was in before plugin-player shipped: the fallback existed and nothing filled it.
 
-**Why service-player and not a registry in the proxies?** Presence already lives there — `TryPlayerLogin` is on the login path, with heartbeats and a TTL. A second store in the proxies would be a second source of truth with its own expiry, and two of those drift. An earlier attempt (plugin-chat's own `chat.players.join/leave` map) also had no memory: core NATS does not replay, so a proxy only ever learned about players who joined *while it was running*.
+**Why service-player and not a registry in the proxies?** Presence already lives there — `TryPlayerLogin` is on the login path, with heartbeats and a TTL. A second store in the proxies would be a second source of truth with its own expiry, and two of those drift. An earlier attempt (plugin-chat's own `chat.players.join/leave` map) also had no memory: core NATS does not replay, so a proxy only ever learned about players who joined _while it was running_.
 
 ## Consuming it
 
@@ -64,7 +64,7 @@ Shading `plugin-proxy-api` gives your plugin its own copy of the registry class 
 
 ## Tab-complete does not list the network
 
-`suggestPlayerNames(prefix, limit)` is a prefix search with a cap, and there is deliberately **no** "give me every online player". Velocity fires tab-complete on *every keystroke*: at 10k players online, a roster dump is a ~200 KB response issued thousands of times a second, with a table scan behind each one. So: local matches from memory, the network only once the prefix is ≥ 2 characters, answers cached 2s per prefix, result capped (default 20).
+`suggestPlayerNames(prefix, limit)` is a prefix search with a cap, and there is deliberately **no** "give me every online player". Velocity fires tab-complete on _every keystroke_: at 10k players online, a roster dump is a ~200 KB response issued thousands of times a second, with a table scan behind each one. So: local matches from memory, the network only once the prefix is ≥ 2 characters, answers cached 2s per prefix, result capped (default 20).
 
 ## The network MOTD
 
@@ -89,14 +89,14 @@ to a custom role, the same way in-game administration is granted.
 
 Resolved per ping, so one stored MOTD reads differently depending on which region answered.
 
-| token | value |
-|---|---|
-| `{{region}}` | `REGION` — the datacentre (`nl-ams1`) |
-| `{{localzone}}`, `{{continent}}` | `CONTINENT` — `eu` / `na` |
-| `{{players}}` | the network-wide player count this ping reports |
-| `{{max}}` | the player cap this ping reports |
+| token                            | value                                           |
+| -------------------------------- | ----------------------------------------------- |
+| `{{region}}`                     | `REGION` — the datacentre (`nl-ams1`)           |
+| `{{localzone}}`, `{{continent}}` | `CONTINENT` — `eu` / `na`                       |
+| `{{players}}`                    | the network-wide player count this ping reports |
+| `{{max}}`                        | the player cap this ping reports                |
 
-A known token with no value renders as nothing; an *unknown* one is left standing, so a typo shows
+A known token with no value renders as nothing; an _unknown_ one is left standing, so a typo shows
 up in the server list instead of disappearing.
 
 ### motd.gg import
@@ -117,21 +117,22 @@ that fails keeps the previous MOTD rather than emptying every region's server-li
 
 Writes go to `ConfigAdminService`, which service-config restricts to admin service accounts and to
 writers explicitly allowed for the app — see `GROUNDS_CONFIG_WRITERS` there. A proxy that is not
-allowed can still *show* the MOTD; `/motd set` then reports the refusal instead of failing silently.
+allowed can still _show_ the MOTD; `/motd set` then reports the refusal instead of failing silently.
 
 ## Configuration
 
-| env | meaning |
-|---|---|
-| `NATS_URL` | broker for `proxy.system.*` / `proxy.transfer.*` (default `nats://nats.infra:4222`) |
-| `PROXY_ID` | this proxy's identity, recorded in a player's session — must differ per proxy (`velocity`, `velocity-2`) |
-| `GROUNDS_TOKEN_FILE` | projected SA-token, presented as the NATS bearer and as the service-config gRPC bearer (default `/var/run/secrets/grounds/token`) |
-| `CONFIG_GRPC_TARGET` | service-config, e.g. `service-config:9000`. **Unset disables `/motd` entirely** and Velocity's own MOTD is served |
-| `CONFIG_ENV` | which environment's document to use; falls back to `GROUNDS_PERMISSION_ENVIRONMENT` |
-| `CONFIG_APP` | which service-config app holds it (default `velocity` — deliberately not the release name, so `velocity` and `velocity-2` share one MOTD) |
-| `MOTD_REFRESH_SECONDS` | how often each proxy re-reads it (default `15`) |
-| `REGION` | `{{region}}`, and the region `/region` considers "here" |
-| `CONTINENT` | `{{localzone}}` / `{{continent}}` |
+| env                    | meaning                                                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `NATS_URL`             | broker for `proxy.system.*` / `proxy.transfer.*` (default `nats://nats.infra:4222`)                                                       |
+| `PROXY_ID`             | this proxy's identity, recorded in a player's session — must differ per proxy (`velocity`, `velocity-2`)                                  |
+| `GROUNDS_TOKEN_FILE`   | projected SA-token, presented as the NATS bearer and as the service-config gRPC bearer (default `/var/run/secrets/grounds/token`)         |
+| `CONFIG_SERVICE_URL`   | service-config contract target, e.g. `service-config:9000`. **Unset disables `/motd` entirely** and Velocity's own MOTD is served         |
+| `CONFIG_GRPC_TARGET`   | Legacy fallback for deployments that have not migrated to `CONFIG_SERVICE_URL`                                                            |
+| `CONFIG_ENV`           | which environment's document to use; falls back to `GROUNDS_PERMISSION_ENVIRONMENT`                                                       |
+| `CONFIG_APP`           | which service-config app holds it (default `velocity` — deliberately not the release name, so `velocity` and `velocity-2` share one MOTD) |
+| `MOTD_REFRESH_SECONDS` | how often each proxy re-reads it (default `15`)                                                                                           |
+| `REGION`               | `{{region}}`, and the region `/region` considers "here"                                                                                   |
+| `CONTINENT`            | `{{localzone}}` / `{{continent}}`                                                                                                         |
 
 The NATS auth-callout scopes each pod to the subjects declared in its bundle `events:` block, so `proxy.system.*` and `proxy.transfer.*` must be listed there — an undeclared subject is denied and the message vanishes.
 
