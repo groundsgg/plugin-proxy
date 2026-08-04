@@ -83,6 +83,17 @@ internal fun parsePlayerCount(payload: String): Int? {
     return digits.toIntOrNull()?.takeIf { it >= 0 }
 }
 
+/**
+ * Resolves service-config through the platform service contract while keeping old deployments
+ * working until every bundle has migrated from the legacy gRPC-specific variable.
+ */
+internal fun resolveConfigServiceTarget(
+    environment: (String) -> String? = System::getenv
+): String? =
+    sequenceOf("CONFIG_SERVICE_URL", "CONFIG_GRPC_TARGET")
+        .mapNotNull { name -> environment(name)?.trim()?.takeIf(String::isNotEmpty) }
+        .firstOrNull()
+
 @Plugin(id = "plugin-proxy", name = "GroundsProxyPlugin", version = BuildInfo.VERSION)
 class GroundsProxyPlugin
 @Inject
@@ -193,14 +204,14 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     /**
      * Brings up the network-wide MOTD, if this deployment has a service-config to keep it in.
      *
-     * Without `CONFIG_GRPC_TARGET` the whole feature stays off and Velocity's own MOTD is served —
-     * the same thing that happened before there was a `/motd`. That is the right shape for a
-     * per-engineer proxy or a local run, where there is no config service to talk to.
+     * Without a config service contract the whole feature stays off and Velocity's own MOTD is
+     * served — the same thing that happened before there was a `/motd`. That is the right shape for
+     * a local run, where there is no config service to talk to.
      */
     private fun startMotd() {
-        val target = env("CONFIG_GRPC_TARGET")
+        val target = resolveConfigServiceTarget()
         if (target == null) {
-            logger.info("MOTD disabled (reason=CONFIG_GRPC_TARGET_unset)")
+            logger.info("MOTD disabled (reason=config_service_url_unset)")
             return
         }
         val app = env("CONFIG_APP") ?: DEFAULT_CONFIG_APP
