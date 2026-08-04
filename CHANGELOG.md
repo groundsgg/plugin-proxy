@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/groundsgg/plugin-proxy/compare/v1.1.0...v1.1.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **config:** consume service contract target ([3e046d7](https://github.com/groundsgg/plugin-proxy/commit/3e046d718ee7b59f9529459603b7113c61cce6df))
+* **config:** consume service contract target ([e5d5d84](https://github.com/groundsgg/plugin-proxy/commit/e5d5d843f8d23cb982f0883a87a40906c6a859a5))
+
 ## [1.1.0](https://github.com/groundsgg/plugin-proxy/compare/v1.0.0...v1.1.0) (2026-08-03)
 
 
