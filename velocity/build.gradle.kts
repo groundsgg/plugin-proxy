@@ -32,12 +32,12 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.2")
     // Adventure reaches the plugin through Velocity at runtime, which is compileOnly here and so
     // absent from the test classpath. The tests render real Components, so they need it themselves.
-    testImplementation("net.kyori:adventure-api:4.21.0")
-    testImplementation("net.kyori:adventure-text-minimessage:4.21.0")
-    testImplementation("net.kyori:adventure-text-serializer-plain:4.21.0")
+    testImplementation("net.kyori:adventure-api:5.2.0")
+    testImplementation("net.kyori:adventure-text-minimessage:5.2.0")
+    testImplementation("net.kyori:adventure-text-serializer-plain:5.2.0")
     // Same reason, for the MOTD: the section codes a motd.gg import arrives in, the JSON the
     // stored document is, and the logger the manager reports a failed refresh through.
-    testImplementation("net.kyori:adventure-text-serializer-legacy:4.21.0")
+    testImplementation("net.kyori:adventure-text-serializer-legacy:5.2.0")
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation("org.slf4j:slf4j-api:2.0.17")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.2")
