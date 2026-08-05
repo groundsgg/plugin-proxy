@@ -30,7 +30,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 dependencies {
     api("io.grpc:grpc-protobuf:1.78.0")
     api("io.grpc:grpc-stub:1.78.0")
-    api("com.google.protobuf:protobuf-java:4.29.0")
+    api("com.google.protobuf:protobuf-java:4.35.1")
     // javax.annotation.Generated, which protoc-gen-grpc-java emits and the JDK
     // no longer ships. compileOnly: nothing reads the annotation at runtime.
     compileOnly("org.apache.tomcat:annotations-api:6.0.53")
@@ -42,7 +42,7 @@ dependencies {
 }
 
 protobuf {
-    protoc { artifact = "com.google.protobuf:protoc:4.29.0" }
+    protoc { artifact = "com.google.protobuf:protoc:4.35.1" }
     plugins { id("grpc") { artifact = "io.grpc:protoc-gen-grpc-java:1.78.0" } }
     generateProtoTasks { all().forEach { it.plugins { id("grpc") } } }
 }
