@@ -275,13 +275,11 @@ class MotdCommand(
     private fun error(message: String): Component = Component.text(message, NamedTextColor.RED)
 
     /**
-     * gRPC failures arrive as a status line that reads like a stack trace. The description is the
-     * part service-config wrote for a human — a caller that is not allowed to write says so there.
+     * The store already unwrapped what service-config wrote for a human — a caller that is not
+     * allowed to write says so in the problem's detail. Anything else falls back to the exception,
+     * which is at least a sentence rather than a status line.
      */
-    private fun describe(ex: Exception): String =
-        (ex as? io.grpc.StatusRuntimeException)?.status?.let { status ->
-            status.description ?: status.code.name
-        } ?: (ex.message ?: ex::class.java.simpleName)
+    private fun describe(ex: Exception): String = ex.message ?: ex::class.java.simpleName
 
     private fun actorOf(source: CommandSource): String = (source as? Player)?.username ?: "console"
 
