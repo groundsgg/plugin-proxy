@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/groundsgg/plugin-proxy/compare/v1.1.1...v2.0.0) (2026-08-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **motd:** store the MOTD over HTTP, dropping gRPC ([#40](https://github.com/groundsgg/plugin-proxy/issues/40))
+
+### Features
+
+* **motd:** store the MOTD over HTTP, dropping gRPC ([#40](https://github.com/groundsgg/plugin-proxy/issues/40)) ([9767c9f](https://github.com/groundsgg/plugin-proxy/commit/9767c9f51e5f813817c2992d65e11b763150d033))
+
 ## [1.1.1](https://github.com/groundsgg/plugin-proxy/compare/v1.1.0...v1.1.1) (2026-08-04)
 
 
