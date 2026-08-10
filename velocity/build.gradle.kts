@@ -14,7 +14,9 @@ repositories {
 
 dependencies {
     implementation(project(":api"))
-    implementation(project(":grpc"))
+    // service-config answers REST; the MOTD store parses its JSON with gson, the
+    // way plugin-match's and plugin-social's clients do.
+    implementation("com.google.code.gson:gson:2.11.0")
     // The tab list header and footer are player-facing text, so they come from a bundle and are
     // drawn in the design tokens, like every other line the network shows a player.
     implementation("gg.grounds:library-i18n:0.2.0")
@@ -27,7 +29,6 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus:1.16.6")
     // The transport for the service-config channel. Shaded by gRPC itself, so it does not fight
     // with the Netty the proxy runs on.
-    implementation("io.grpc:grpc-netty-shaded:1.78.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.2")
     // Adventure reaches the plugin through Velocity at runtime, which is compileOnly here and so

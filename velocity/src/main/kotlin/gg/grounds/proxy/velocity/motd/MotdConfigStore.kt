@@ -1,45 +1,32 @@
 package gg.grounds.proxy.velocity.motd
 
-import gg.grounds.grpc.config.ConfigAdminServiceGrpc
-import gg.grounds.grpc.config.ConfigServiceGrpc
-import gg.grounds.grpc.config.DeleteDocumentRequest
-import gg.grounds.grpc.config.GetDocumentRequest
-import gg.grounds.grpc.config.PutDocumentRequest
-import io.grpc.CallOptions
-import io.grpc.Channel
-import io.grpc.ClientCall
-import io.grpc.ClientInterceptor
-import io.grpc.ForwardingClientCall
-import io.grpc.LoadBalancerRegistry
-import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
-import io.grpc.Metadata
-import io.grpc.MethodDescriptor
-import io.grpc.NameResolverRegistry
-import io.grpc.Status
-import io.grpc.StatusRuntimeException
-import io.grpc.internal.DnsNameResolverProvider
-import io.grpc.internal.PickFirstLoadBalancerProvider
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 
 /**
  * The MOTD's home in service-config: one document, `motd/active`, under a fixed app and the
  * deployment's environment.
  *
- * Reads go through `ConfigService`, which any authenticated caller may use; writes go through
- * `ConfigAdminService`, which service-config restricts to admin service accounts and to writers
- * explicitly allowed for this app. A proxy that is not on that list can still show the MOTD — it
- * just cannot change it, and `/motd set` says so rather than failing silently.
+ * Reads go to the consumer API, which any authenticated caller may use; writes go to the admin API,
+ * which service-config restricts to admin service accounts and to writers explicitly allowed for
+ * this app. A proxy that is not on that list can still show the MOTD — it just cannot change it,
+ * and `/motd set` says so rather than failing silently.
  *
- * Deliberately not built on the shared `plugin-config` client: that one reads only, and attaches no
- * credential, so it cannot do either half of this against a service-config with auth enabled.
+ * Deliberately not built on the shared `plugin-config` client: that one reads only, so it cannot do
+ * the writing half at all.
  */
 class MotdConfigStore(
     private val app: String,
     private val env: String,
-    private val channel: ManagedChannel,
+    private val baseUri: URI,
+    private val http: HttpClient,
 ) : MotdStore, AutoCloseable {
 
     /**
@@ -47,73 +34,82 @@ class MotdConfigStore(
      * an error — the caller then leaves Velocity's own MOTD alone.
      */
     override fun read(): MotdDocument? {
-        val response =
-            try {
-                ConfigServiceGrpc.newBlockingStub(channel)
-                    .withDeadlineAfter(DEADLINE_SECONDS, TimeUnit.SECONDS)
-                    .getDocument(
-                        GetDocumentRequest.newBuilder()
-                            .setApp(app)
-                            .setEnv(env)
-                            .setNamespace(NAMESPACE)
-                            .setConfigKey(CONFIG_KEY)
-                            .build()
-                    )
-            } catch (ex: StatusRuntimeException) {
-                if (ex.status.code == Status.Code.NOT_FOUND) return null
-                throw ex
-            }
-        return MotdDocument.fromJson(response.document.contentJson)
+        val response = send(request(consumerPath()).GET())
+        if (response.statusCode() == 404) return null
+        requireSuccess(response, "read the MOTD")
+        val document =
+            GSON.fromJson(response.body(), JsonObject::class.java)?.get("contentJson")?.asString
+                ?: return null
+        return MotdDocument.fromJson(document)
     }
 
     /** Stores [document] as the network's MOTD, replacing whatever was there. */
     override fun write(document: MotdDocument, updatedBy: String) {
-        ConfigAdminServiceGrpc.newBlockingStub(channel)
-            .withDeadlineAfter(DEADLINE_SECONDS, TimeUnit.SECONDS)
-            .putDocument(
-                PutDocumentRequest.newBuilder()
-                    .setApp(app)
-                    .setEnv(env)
-                    .setNamespace(NAMESPACE)
-                    .setConfigKey(CONFIG_KEY)
-                    .setContentJson(document.toJson())
-                    .setUpdatedBy(updatedBy)
-                    .build()
-            )
-        // No expected_version: two operators racing on /motd is a coin flip either way, and a
+        // No expectedVersion: two operators racing on /motd is a coin flip either way, and a
         // rejected write that says "someone else changed it, try again" is worse in chat than the
         // second one simply winning. The dashboard, which can show the conflict, is where
         // optimistic concurrency earns its keep.
+        val body = GSON.toJson(mapOf("contentJson" to document.toJson(), "updatedBy" to updatedBy))
+        val response =
+            send(
+                request(adminPath())
+                    .header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString(body))
+            )
+        requireSuccess(response, "set the MOTD")
     }
 
     /** Removes the stored MOTD. Returns true when there was one to remove. */
-    override fun clear(deletedBy: String): Boolean =
-        ConfigAdminServiceGrpc.newBlockingStub(channel)
-            .withDeadlineAfter(DEADLINE_SECONDS, TimeUnit.SECONDS)
-            .deleteDocument(
-                DeleteDocumentRequest.newBuilder()
-                    .setApp(app)
-                    .setEnv(env)
-                    .setNamespace(NAMESPACE)
-                    .setConfigKey(CONFIG_KEY)
-                    .setDeletedBy(deletedBy)
-                    .build()
-            )
-            .deleted
+    override fun clear(deletedBy: String): Boolean {
+        val response = send(request(adminPath()).DELETE())
+        requireSuccess(response, "clear the MOTD")
+        return GSON.fromJson(response.body(), JsonObject::class.java)?.get("deleted")?.asBoolean
+            ?: false
+    }
 
     override fun close() {
-        channel.shutdown()
-        if (!channel.awaitTermination(SHUTDOWN_SECONDS, TimeUnit.SECONDS)) {
-            channel.shutdownNow()
-        }
+        http.close()
+    }
+
+    private fun consumerPath() =
+        "/v1/config/apps/$app/envs/$env/namespaces/$NAMESPACE/documents/$CONFIG_KEY"
+
+    private fun adminPath() =
+        "/v1/config/admin/apps/$app/envs/$env/namespaces/$NAMESPACE/documents/$CONFIG_KEY"
+
+    private fun request(path: String): HttpRequest.Builder {
+        val builder =
+            HttpRequest.newBuilder(baseUri.resolve(path))
+                .timeout(DEADLINE)
+                .header("Accept", "application/json")
+        readToken()?.let { builder.header("Authorization", "Bearer $it") }
+        return builder
+    }
+
+    private fun send(builder: HttpRequest.Builder): HttpResponse<String> =
+        http.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+
+    /**
+     * Non-2xx becomes an exception carrying what service-config wrote for a human — a caller that
+     * is not allowed to write says so in the problem's `detail`, and `/motd` shows that line rather
+     * than a status code.
+     */
+    private fun requireSuccess(response: HttpResponse<String>, action: String) {
+        if (response.statusCode() in 200..299) return
+        val detail =
+            runCatching {
+                    GSON.fromJson(response.body(), JsonObject::class.java)?.get("detail")?.asString
+                }
+                .getOrNull()
+        throw MotdStoreException(detail ?: "Could not $action (HTTP ${response.statusCode()})")
     }
 
     companion object {
         const val NAMESPACE = "motd"
         const val CONFIG_KEY = "active"
 
-        private const val DEADLINE_SECONDS = 5L
-        private const val SHUTDOWN_SECONDS = 3L
+        private val GSON = Gson()
+        private val DEADLINE: Duration = Duration.ofSeconds(5)
 
         /**
          * Where the projected ServiceAccount token is mounted. The kubelet rotates it well before
@@ -123,21 +119,17 @@ class MotdConfigStore(
         private const val DEFAULT_TOKEN_PATH = "/var/run/secrets/grounds/token"
 
         fun open(app: String, env: String, target: String): MotdConfigStore {
-            // Velocity loads each plugin in its own classloader, and gRPC's service-loader
-            // discovery finds nothing there. Registering both providers by hand is what makes a
-            // `dns:///` target resolvable from inside a shaded plugin jar; without it the channel
-            // comes up and every call fails with UNAVAILABLE.
-            NameResolverRegistry.getDefaultRegistry().register(DnsNameResolverProvider())
-            LoadBalancerRegistry.getDefaultRegistry().register(PickFirstLoadBalancerProvider())
-
-            val channel =
-                ManagedChannelBuilder.forTarget(target)
-                    .usePlaintext()
-                    .intercept(BearerTokenInterceptor(::readToken))
-                    .build()
-            return MotdConfigStore(app, env, channel)
+            // The chart injects the address with no scheme; java.net.http throws parsing that
+            // directly, so default to http.
+            val baseUri = URI.create(if (target.contains("://")) target else "http://$target")
+            return MotdConfigStore(app, env, baseUri, HttpClient.newHttpClient())
         }
 
+        /**
+         * A missing token is sent unauthenticated on purpose: locally there is no projected volume
+         * and service-config runs with auth off, and in the cluster the server rejecting the call
+         * is a clearer failure than the client refusing to make it.
+         */
         private fun readToken(): String? {
             val path = Path.of(System.getenv("GROUNDS_TOKEN_FILE") ?: DEFAULT_TOKEN_PATH)
             return try {
@@ -147,34 +139,7 @@ class MotdConfigStore(
             }
         }
     }
-
-    /**
-     * Attaches the projected ServiceAccount token, which service-config verifies against the
-     * cluster's JWKS and expects to carry the `grounds-services` audience.
-     *
-     * A missing token is passed through unauthenticated on purpose: locally there is no projected
-     * volume and service-config runs with auth off, and in the cluster the server rejecting the
-     * call is a clearer failure than the client refusing to make it.
-     */
-    internal class BearerTokenInterceptor(private val token: () -> String?) : ClientInterceptor {
-        override fun <ReqT : Any, RespT : Any> interceptCall(
-            method: MethodDescriptor<ReqT, RespT>,
-            callOptions: CallOptions,
-            next: Channel,
-        ): ClientCall<ReqT, RespT> =
-            object :
-                ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
-                    next.newCall(method, callOptions)
-                ) {
-                override fun start(responseListener: Listener<RespT>, headers: Metadata) {
-                    token()?.let { headers.put(AUTHORIZATION, "Bearer $it") }
-                    super.start(responseListener, headers)
-                }
-            }
-
-        private companion object {
-            val AUTHORIZATION: Metadata.Key<String> =
-                Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER)
-        }
-    }
 }
+
+/** A refusal or an outage from service-config, carrying the line it wrote for a human. */
+class MotdStoreException(message: String) : RuntimeException(message)

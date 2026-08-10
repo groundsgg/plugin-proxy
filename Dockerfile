@@ -24,7 +24,6 @@ COPY gradle/ gradle/
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 
 COPY api/ api/
-COPY grpc/ grpc/
 COPY velocity/ velocity/
 
 # `:velocity:build` produces the shaded plugin JAR (the api module, the NATS
