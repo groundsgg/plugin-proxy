@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.MultiGauge
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
@@ -15,6 +16,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import org.slf4j.Logger
 
@@ -81,6 +83,7 @@ private constructor(
             snapshot: ProxySnapshot,
             logger: Logger,
             region: String? = System.getenv("REGION"),
+            devices: BedrockDevices = BedrockDevices.of(logger),
         ): ProxyMetrics {
             val registry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
             // `cluster` and `pod` are stamped by the satellite's metrics agent; the region as the
@@ -94,8 +97,23 @@ private constructor(
             val closeables = bindJvmAndProcess(registry)
             bindProxyGauges(registry, snapshot)
 
+            // One series per Bedrock device platform, and the row set is not known ahead of time —
+            // it is whatever players happen to be connected. A MultiGauge is the one meter that
+            // takes a changing set of label values without registering a meter per value by hand.
+            val bedrock =
+                MultiGauge.builder("velocity.bedrock.players")
+                    .description("Bedrock players by the device platform they are playing on")
+                    .register(registry)
+            val seenDevices = ConcurrentHashMap.newKeySet<String>()
+
             val http = HttpServer.create(InetSocketAddress(config.host, config.port), 0)
-            http.createContext("/") { exchange -> handle(exchange, config.path, registry) }
+            http.createContext("/") { exchange ->
+                // Refreshed here rather than on a timer: the endpoint is the only reader, so a
+                // scrape gets the count as it is at that moment and an unscraped proxy pays
+                // nothing. The walk is one pass over the connected Bedrock players.
+                refreshDevices(bedrock, seenDevices, devices)
+                handle(exchange, config.path, registry)
+            }
             http.executor =
                 Executors.newSingleThreadExecutor { runnable ->
                     Thread(runnable, "grounds-proxy-metrics").apply { isDaemon = true }
@@ -110,6 +128,30 @@ private constructor(
                 config.path,
             )
             return metrics
+        }
+
+        /**
+         * Rewrite the device rows from what Floodgate reports right now.
+         *
+         * Every platform ever seen keeps a row, reporting 0 when nobody is on it. Registering only
+         * the platforms currently present would make a series go **stale** the moment its last
+         * player leaves, which Grafana draws as a gap — indistinguishable from the endpoint being
+         * down, and exactly wrong for the number that says "nobody is playing on a Switch".
+         */
+        private fun refreshDevices(
+            gauge: MultiGauge,
+            seen: MutableSet<String>,
+            devices: BedrockDevices,
+        ) {
+            val counts = devices.countsByDevice()
+            seen.addAll(counts.keys)
+            if (seen.isEmpty()) return
+            gauge.register(
+                seen.map { device ->
+                    MultiGauge.Row.of(Tags.of("device_os", device), counts[device] ?: 0)
+                },
+                true,
+            )
         }
 
         private fun handle(

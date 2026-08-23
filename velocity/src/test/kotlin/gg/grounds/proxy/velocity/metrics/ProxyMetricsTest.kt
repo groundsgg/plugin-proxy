@@ -34,13 +34,38 @@ class ProxyMetricsTest {
             override fun networkPlayers(): Int? = network
         }
 
-    private fun start(path: String = "/metrics", region: String? = "nl-ams1"): ProxyMetrics =
+    /** A Floodgate stand-in whose player list the test moves between scrapes. */
+    object FakeFloodgateApi {
+        @JvmStatic var connected: Collection<Any?> = emptyList()
+
+        @JvmStatic fun getInstance(): FakeFloodgateApi = this
+
+        @JvmStatic fun getPlayers(): Collection<Any?> = connected
+    }
+
+    enum class FakeDeviceOs {
+        ANDROID,
+        NX,
+    }
+
+    class FakePlayer(private val device: FakeDeviceOs) {
+        fun getDeviceOs(): FakeDeviceOs = device
+    }
+
+    private fun start(
+        path: String = "/metrics",
+        region: String? = "nl-ams1",
+        devices: BedrockDevices = BedrockDevices.of(logger),
+    ): ProxyMetrics =
         ProxyMetrics.start(
             config = MetricsConfig(enabled = true, host = "127.0.0.1", port = 0, path = path),
             snapshot = snapshot,
             logger = logger,
             region = region,
+            devices = devices,
         )
+
+    private fun withFloodgate() = BedrockDevices(logger) { FakeFloodgateApi::class.java }
 
     private fun scrape(metrics: ProxyMetrics, path: String = "/metrics"): HttpResponse<String> =
         HttpClient.newHttpClient()
@@ -137,8 +162,92 @@ class ProxyMetricsTest {
         assertTrue(runCatching { MetricsConfig.fromEnvironment(env::get) }.isFailure)
     }
 
+    @Test
+    fun `publishes Bedrock players by device platform when Floodgate is there`() {
+        FakeFloodgateApi.connected =
+            listOf(
+                FakePlayer(FakeDeviceOs.ANDROID),
+                FakePlayer(FakeDeviceOs.ANDROID),
+                FakePlayer(FakeDeviceOs.NX),
+            )
+
+        start(devices = withFloodgate()).use { metrics ->
+            val body = scrape(metrics).body()
+
+            assertHas(body, """velocity_bedrock_players{device_os="ANDROID"""")
+            assertHas(body, """velocity_bedrock_players{device_os="NX"""")
+            assertEquals(2.0, sampleAt(body, """velocity_bedrock_players{device_os="ANDROID""""))
+            assertEquals(1.0, sampleAt(body, """velocity_bedrock_players{device_os="NX""""))
+        }
+    }
+
+    @Test
+    fun `a proxy without Floodgate publishes no device series at all`() {
+        // Every Java proxy. Zero would be a claim about Bedrock players it cannot see; absent is
+        // the honest answer, and it keeps the Java proxies out of a Bedrock panel entirely.
+        start().use { metrics ->
+            assertFalse(scrape(metrics).body().contains("velocity_bedrock_players"))
+        }
+    }
+
+    @Test
+    fun `a platform that empties reports zero rather than vanishing`() {
+        FakeFloodgateApi.connected = listOf(FakePlayer(FakeDeviceOs.NX))
+        val devices = withFloodgate()
+
+        start(devices = devices).use { metrics ->
+            assertEquals(
+                1.0,
+                sampleAt(scrape(metrics).body(), """velocity_bedrock_players{device_os="NX""""),
+            )
+
+            // The last Switch player leaves. Dropping the row would make the series stale, which
+            // Grafana draws as a gap — indistinguishable from the endpoint being down.
+            FakeFloodgateApi.connected = emptyList()
+
+            assertEquals(
+                0.0,
+                sampleAt(scrape(metrics).body(), """velocity_bedrock_players{device_os="NX""""),
+            )
+        }
+    }
+
+    @Test
+    fun `device counts are re-read on every scrape`() {
+        FakeFloodgateApi.connected = listOf(FakePlayer(FakeDeviceOs.ANDROID))
+        val devices = withFloodgate()
+
+        start(devices = devices).use { metrics ->
+            assertEquals(
+                1.0,
+                sampleAt(scrape(metrics).body(), """velocity_bedrock_players{device_os="ANDROID""""),
+            )
+
+            FakeFloodgateApi.connected =
+                listOf(FakePlayer(FakeDeviceOs.ANDROID), FakePlayer(FakeDeviceOs.ANDROID))
+
+            assertEquals(
+                2.0,
+                sampleAt(scrape(metrics).body(), """velocity_bedrock_players{device_os="ANDROID""""),
+            )
+        }
+    }
+
     private fun assertHas(body: String, needle: String) =
         assertTrue(body.contains(needle), "the endpoint published no `$needle`")
+
+    /**
+     * The value of the first sample whose line starts with the given prefix.
+     *
+     * Separate from [value] because that one appends its own `{` or space to match a bare metric
+     * name; a labelled sample has to be matched as the literal prefix it is.
+     */
+    private fun sampleAt(body: String, prefix: String): Double? =
+        body
+            .lines()
+            .firstOrNull { it.startsWith(prefix) }
+            ?.substringAfterLast(' ')
+            ?.toDoubleOrNull()
 
     /** The value of the first sample whose name matches, or null if it is not published. */
     private fun value(body: String, name: String): Double? =

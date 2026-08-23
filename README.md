@@ -134,6 +134,29 @@ allowed can still _show_ the MOTD; `/motd set` then reports the refusal instead 
 | `REGION`               | `{{region}}`, and the region `/region` considers "here"                                                                                   |
 | `CONTINENT`            | `{{localzone}}` / `{{continent}}`                                                                                                         |
 
+### Bedrock device platforms
+
+On a proxy that also runs Floodgate — only `velocity-bedrock` does — the endpoint additionally
+publishes which platform Bedrock players are on:
+
+```text
+velocity_bedrock_players{device_os="ANDROID"}   Floodgate's DeviceOs, by enum name:
+                                                ANDROID, IOS, OSX, XBOX, NX, PS4, UWP, …
+```
+
+Nothing else in the estate can answer this. The device travels in a Bedrock client's login chain,
+Geyser hands it to Floodgate, and by the time Velocity sees the player they are an ordinary
+Java-protocol connection with the platform stripped off — the game servers cannot tell a Switch
+from a phone.
+
+Floodgate is read **reflectively** and is not a build dependency: this plugin loads on every proxy
+and only one of them has Floodgate, and GeyserMC publishes the API as a SNAPSHOT only. A proxy
+without Floodgate publishes no `velocity_bedrock_players` series at all — absent rather than zero,
+because "no Bedrock players" and "cannot see Bedrock players" are different states.
+
+A platform that empties keeps its series and reports 0, so a graph shows nobody on a Switch rather
+than a gap.
+
 The NATS auth-callout scopes each pod to the subjects declared in its bundle `events:` block, so `proxy.system.*` and `proxy.transfer.*` must be listed there — an undeclared subject is denied and the message vanishes.
 
 ## Build
