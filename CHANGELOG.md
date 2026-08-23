@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/groundsgg/plugin-proxy/compare/v2.0.0...v2.1.0) (2026-08-23)
+
+
+### Features
+
+* **metrics:** publish which platform Bedrock players are on ([#44](https://github.com/groundsgg/plugin-proxy/issues/44)) ([9e2ba6a](https://github.com/groundsgg/plugin-proxy/commit/9e2ba6a358a418fd87f0bdbddc736c2b1a7a5f9a))
+
 ## [2.0.0](https://github.com/groundsgg/plugin-proxy/compare/v1.1.1...v2.0.0) (2026-08-10)
 
 
