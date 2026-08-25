@@ -15,15 +15,20 @@ object TabBadge {
         val badgeWidth = TabGlyphs.LEFT_PX + middles * TabGlyphs.MIDDLE_PX + TabGlyphs.RIGHT_PX
         val padLeft = (badgeWidth - textWidth) / 2
         val padRight = badgeWidth - textWidth - padLeft
+        val gap = TabSpaces.of(-1)
         val slices = buildString {
             append(TabGlyphs.BADGE_LEFT)
-            repeat(middles) { append(TabGlyphs.BADGE_MIDDLE) }
+            append(gap)
+            repeat(middles) {
+                append(TabGlyphs.BADGE_MIDDLE)
+                append(gap)
+            }
             append(TabGlyphs.BADGE_RIGHT)
+            append(gap)
         }
-        val drawn = badgeWidth + slices.length
         return Component.text()
             .append(Component.text(slices, fill).font(TabGlyphs.FONT))
-            .append(Component.text(TabSpaces.of(-drawn)).font(TabGlyphs.FONT))
+            .append(Component.text(TabSpaces.of(-badgeWidth)).font(TabGlyphs.FONT))
             .append(Component.text(TabSpaces.of(padLeft)).font(TabGlyphs.FONT))
             .append(Component.text(label, NamedTextColor.WHITE))
             .append(Component.text(TabSpaces.of(padRight)).font(TabGlyphs.FONT))
