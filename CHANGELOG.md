@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/groundsgg/plugin-proxy/compare/v2.1.0...v2.2.0) (2026-08-25)
+
+
+### Features
+
+* brand the tab list with logo, rank chips, and server footer ([#46](https://github.com/groundsgg/plugin-proxy/issues/46)) ([a6ce6de](https://github.com/groundsgg/plugin-proxy/commit/a6ce6dee1051a4c5eff2fa0eacc024cececc3151))
+
 ## [2.1.0](https://github.com/groundsgg/plugin-proxy/compare/v2.0.0...v2.1.0) (2026-08-23)
 
 
