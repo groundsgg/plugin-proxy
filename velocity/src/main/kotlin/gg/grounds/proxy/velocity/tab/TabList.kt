@@ -4,24 +4,29 @@ import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import gg.grounds.i18n.Palette
 import gg.grounds.i18n.Translations
-import gg.grounds.proxy.api.PlayerRole
+import gg.grounds.proxy.api.PlayerLocaleQuery
 import gg.grounds.proxy.api.PlayerRoleQuery
+import gg.grounds.proxy.api.ServerDisplayQuery
 import java.time.Year
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.TextColor
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 
 /**
- * The header and footer above and below the player list, and the colour of the names in it.
+ * The header and footer above and below the player list, and the chips and colour of the names in
+ * it.
  *
  * The tab list is the only screen a player can open from anywhere, which makes it the right place
- * for the two facts that are true everywhere: which network this is, and where in it you are
- * standing. It belongs to the proxy because both answers do — a backend server knows its own name
- * and nothing about the region it sits in.
+ * for the two facts that are true everywhere: which network this is, and which backend you are on.
+ * It belongs to the proxy because both answers do — a backend server knows its own name and nothing
+ * about how the network should label it.
  *
  * ```
- *              Grounds Network
+ *              [GROUNDS wordmark]
  *
- *      Region nl-ams1     Ping 24 ms
+ *  [DE] [ADMIN]  Steve
+ *  [EN] [USER]   Alex
+ *
+ *      Lobby s9fwt              Ping 24 ms
  *              grounds.gg 2026
  * ```
  *
@@ -32,8 +37,9 @@ import net.kyori.adventure.text.format.TextColor
 class TabList(
     private val proxy: ProxyServer,
     private val messages: Translations,
-    private val region: () -> String?,
     private val roleQuery: () -> PlayerRoleQuery?,
+    private val localeQuery: () -> PlayerLocaleQuery?,
+    private val serverQuery: () -> ServerDisplayQuery?,
 ) {
 
     /** Redraws everything [viewer] sees. */
@@ -59,35 +65,56 @@ class TabList(
         messages.render(
             ProxyMessage.TAB_FOOTER,
             viewer,
-            "region" to (region() ?: UNKNOWN),
+            "server" to serverLabel(viewer),
             "ping" to ping(viewer.ping),
             "year" to Year.now().value.toString(),
         )
 
+    private fun serverLabel(viewer: Player): Component {
+        val raw =
+            viewer.currentServer.map { it.serverInfo.name }.orElse(null)
+                ?: return Component.text(UNKNOWN, Palette.TEXT_FAINT)
+        val queried = serverQuery()?.displayOf(raw)
+        val id = queried?.id ?: ServerDisplayIds.idOf(raw)
+        val kind = queried?.kind
+        val kindLabel = kindLabel(kind, viewer)
+        val text = if (kindLabel == null) id else "$kindLabel $id"
+        return Component.text(text, Palette.TEXT)
+    }
+
+    private fun kindLabel(kind: String?, viewer: Player): String? {
+        val key =
+            when (kind) {
+                "lobby" -> ProxyMessage.TAB_SERVER_LOBBY
+                "game" -> ProxyMessage.TAB_SERVER_GAME
+                "match" -> ProxyMessage.TAB_SERVER_MATCH
+                else -> return kind
+            }
+        return plain(messages.render(key, viewer))
+    }
+
     /**
-     * Paints each name in the colour of its owner's highest role.
+     * Paints each name with language and rank chips, then the name in the role's colour.
      *
-     * A no-op until something registers a [PlayerRoleQuery] — plugin-permissions holds the snapshot
-     * these colours come from. Until then every name keeps the backend's own display name, which is
-     * what players see today.
+     * Locale comes from [PlayerLocaleQuery] when registered, otherwise the locale the client
+     * announced. Rank comes from [PlayerRoleQuery]. A missing query or a missing value omits that
+     * chip rather than drawing a placeholder. Display names are always set so a player with no rank
+     * still shows a language chip.
      */
     private fun colourNames(viewer: Player) {
-        val query = roleQuery() ?: return
+        val query = roleQuery()
+        val localeQ = localeQuery()
         viewer.tabList.entries.forEach { entry ->
-            val role = query.highestRoleOf(entry.profile.id) ?: return@forEach
-            entry.setDisplayName(displayName(entry.profile.name, role))
+            val role = query?.highestRoleOf(entry.profile.id)
+            val locale =
+                localeQ?.localeOf(entry.profile.id)
+                    ?: proxy.getPlayer(entry.profile.id).map { it.effectiveLocale }.orElse(null)
+            entry.setDisplayName(TabName.format(entry.profile.name, locale, role))
         }
     }
 
-    private fun displayName(name: String, role: PlayerRole): Component {
-        // A colour the service stores badly should cost that one player their colour, not throw on
-        // a render that runs every few seconds for everybody.
-        val colour = role.colour?.let(TextColor::fromHexString) ?: Palette.TEXT
-        val prefix = role.prefix.orEmpty()
-        return Component.empty()
-            .append(Component.text(prefix, colour))
-            .append(Component.text(name, colour))
-    }
+    private fun plain(component: Component): String =
+        PlainTextComponentSerializer.plainText().serialize(component)
 
     companion object {
         private const val UNKNOWN = "—"

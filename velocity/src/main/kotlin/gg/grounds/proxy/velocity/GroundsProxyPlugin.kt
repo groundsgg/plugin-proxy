@@ -18,6 +18,7 @@ import gg.grounds.proxy.api.PlayerLocaleQuery
 import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
+import gg.grounds.proxy.api.ServerDisplayQuery
 import gg.grounds.proxy.velocity.command.MotdCommand
 import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
@@ -183,9 +184,13 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         // Looked up per call, not captured: plugin-permissions may register after this runs, and a
         // reference taken now would stay null for the life of the proxy.
         val tab =
-            TabList(proxy, messages, region) {
-                ProxyServiceRegistry.get(PlayerRoleQuery::class.java)
-            }
+            TabList(
+                proxy,
+                messages,
+                roleQuery = { ProxyServiceRegistry.get(PlayerRoleQuery::class.java) },
+                localeQuery = { ProxyServiceRegistry.get(PlayerLocaleQuery::class.java) },
+                serverQuery = { ProxyServiceRegistry.get(ServerDisplayQuery::class.java) },
+            )
         tabList = tab
 
         // On a timer as well as on join: the ping and the roster both change with no event to hang
