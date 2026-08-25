@@ -26,7 +26,7 @@ dependencies {
     // JVM binders publish the same names the services and the game servers do — one Grafana query
     // then covers a proxy, a game server and a service. Shaded into the plugin jar like jnats.
     // HTTP is the JDK's own server, so nothing else is added.
-    implementation("io.micrometer:micrometer-registry-prometheus:1.16.6")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.17.0")
     // The transport for the service-config channel. Shaded by gRPC itself, so it does not fight
     // with the Netty the proxy runs on.
 
