@@ -50,6 +50,17 @@ class TabListTest {
     }
 
     @Test
+    fun `the header pads the wordmark on every side`() {
+        val header = plain(messages.render(ProxyMessage.TAB_HEADER, Locale.ENGLISH))
+        val side = TabSpaces.of(TabGlyphs.LOGO_PAD)
+        assertTrue(header.contains("$side${TabGlyphs.LOGO}$side"), header)
+        val lines = header.lines()
+        assertTrue(lines.size >= 6, header)
+        assertTrue(lines.first().isEmpty(), header)
+        assertTrue(lines.last().isEmpty(), header)
+    }
+
+    @Test
     fun `the header is not prefixed - the wordmark already says whose network this is`() {
         val header = plain(messages.render(ProxyMessage.TAB_HEADER, Locale.ENGLISH))
         assertFalse(header.contains("[Grounds]"), header)

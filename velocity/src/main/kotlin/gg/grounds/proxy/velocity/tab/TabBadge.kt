@@ -6,13 +6,19 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
 
 object TabBadge {
-    fun chip(label: String, fill: TextColor): Component {
+    fun width(label: String): Int {
         val textWidth = VanillaAdvances.width(label)
         val pad = 4
         val inner =
             max(textWidth + pad, TabGlyphs.LEFT_PX + TabGlyphs.RIGHT_PX + TabGlyphs.MIDDLE_PX)
         val middles = inner - TabGlyphs.LEFT_PX - TabGlyphs.RIGHT_PX
-        val badgeWidth = TabGlyphs.LEFT_PX + middles * TabGlyphs.MIDDLE_PX + TabGlyphs.RIGHT_PX
+        return TabGlyphs.LEFT_PX + middles * TabGlyphs.MIDDLE_PX + TabGlyphs.RIGHT_PX
+    }
+
+    fun chip(label: String, fill: TextColor): Component {
+        val textWidth = VanillaAdvances.width(label)
+        val badgeWidth = width(label)
+        val middles = badgeWidth - TabGlyphs.LEFT_PX - TabGlyphs.RIGHT_PX
         val padLeft = (badgeWidth - textWidth) / 2
         val padRight = badgeWidth - textWidth - padLeft
         val gap = TabSpaces.of(-1)
