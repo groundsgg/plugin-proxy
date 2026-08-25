@@ -24,12 +24,12 @@ class TabListTest {
     private fun colourOf(component: Component) =
         component.color() ?: component.children().firstNotNullOfOrNull { it.color() }
 
-    private fun footer(region: String, ping: Long) =
+    private fun footer(server: String, ping: Long) =
         plain(
             messages.render(
                 ProxyMessage.TAB_FOOTER,
                 Locale.ENGLISH,
-                "region" to region,
+                "server" to server,
                 "ping" to TabList.ping(ping),
                 "year" to Year.now().value.toString(),
             )
@@ -43,23 +43,25 @@ class TabListTest {
     }
 
     @Test
-    fun `the header names the network`() {
+    fun `the header is the wordmark glyph`() {
         val header = plain(messages.render(ProxyMessage.TAB_HEADER, Locale.ENGLISH))
-        assertTrue(header.contains("Grounds Network"), header)
+        assertTrue(header.contains("\uE000"), header)
+        assertFalse(header.contains("Grounds Network"), header)
     }
 
     @Test
-    fun `the header is not prefixed - it already says whose network this is`() {
+    fun `the header is not prefixed - the wordmark already says whose network this is`() {
         val header = plain(messages.render(ProxyMessage.TAB_HEADER, Locale.ENGLISH))
         assertFalse(header.contains("[Grounds]"), header)
     }
 
     @Test
-    fun `the footer carries the region, the ping and the domain`() {
-        val rendered = footer("nl-ams1", 24)
-        assertTrue(rendered.contains("nl-ams1"), rendered)
+    fun `the footer carries the server, the ping and the domain`() {
+        val rendered = footer("Lobby s9fwt", 24)
+        assertTrue(rendered.contains("Lobby s9fwt"), rendered)
         assertTrue(rendered.contains("24 ms"), rendered)
         assertTrue(rendered.contains("grounds.gg ${Year.now().value}"), rendered)
+        assertFalse(rendered.contains("nl-ams1"), rendered)
     }
 
     @Test
@@ -110,6 +112,8 @@ class TabListTest {
         val legacy = Regex("<(dark_)?(red|green|blue|aqua|purple|yellow|gray|grey|white|black)>")
         val bundle = ResourceBundle.getBundle(BUNDLE, Locale.ENGLISH, javaClass.classLoader)
         for (key in bundle.keySet()) {
+            // The wordmark is a bitmap glyph MiniMessage tints white; it is not body copy.
+            if (key == ProxyMessage.TAB_HEADER.id) continue
             assertFalse(
                 legacy.containsMatchIn(bundle.getString(key)),
                 "$key uses a legacy colour instead of a semantic token",
