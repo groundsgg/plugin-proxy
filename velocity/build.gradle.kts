@@ -42,5 +42,5 @@ dependencies {
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation("org.slf4j:slf4j-api:2.0.18")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
 }
