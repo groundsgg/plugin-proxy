@@ -3,6 +3,7 @@ package gg.grounds.proxy.velocity.tab
 import gg.grounds.proxy.api.PlayerRole
 import java.util.Locale
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -29,5 +30,23 @@ class TabNameTest {
         val text = plain(null, null)
         assertFalse(text.contains("DE"), text)
         assertTrue(text.contains("Steve"), text)
+    }
+
+    @Test
+    fun `a short name is padded to the wordmark width`() {
+        val name = "A"
+        val text =
+            PlainTextComponentSerializer.plainText().serialize(TabName.format(name, null, null))
+        val pad = TabGlyphs.HEADER_WIDTH - VanillaAdvances.width(name)
+        assertTrue(pad > 0)
+        assertTrue(text.contains(TabSpaces.of(pad)), text)
+    }
+
+    @Test
+    fun `a name that is already wider than the wordmark is not padded`() {
+        val name = "A".repeat(40)
+        val text =
+            PlainTextComponentSerializer.plainText().serialize(TabName.format(name, null, null))
+        assertEquals(name, text)
     }
 }
