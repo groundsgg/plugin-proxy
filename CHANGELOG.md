@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/groundsgg/plugin-proxy/compare/v2.2.2...v2.3.0) (2026-09-02)
+
+
+### Features
+
+* compact tab ranks and mark Bedrock players ([#58](https://github.com/groundsgg/plugin-proxy/issues/58)) ([fb5b0df](https://github.com/groundsgg/plugin-proxy/commit/fb5b0df7e9b6593d0ece5716dd6ed41ef1f15102))
+
 ## [2.2.2](https://github.com/groundsgg/plugin-proxy/compare/v2.2.1...v2.2.2) (2026-09-02)
 
 
