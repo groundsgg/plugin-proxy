@@ -12,13 +12,13 @@ object TabGlyphs {
     const val MIDDLE_PX = 1
     const val RIGHT_PX = 3
     /** Matches `TabFont` bitmap height and the committed `tab/logo.png`. */
-    const val LOGO_HEIGHT = 32
+    const val LOGO_HEIGHT = 26
     const val LOGO_TEXTURE_WIDTH = 256
     const val LOGO_TEXTURE_HEIGHT = 52
     /**
      * The client rounds the scaled texture width, then adds the 1px gap every bitmap glyph carries
-     * (the same gap [TabBadge] cancels between slices). Truncating `256 * 32 / 52` is 157; the
-     * glyph actually advances 159.
+     * (the same gap [TabBadge] cancels between slices). At height 26, the 256x52 texture is 128px
+     * wide and the glyph advances 129px.
      */
     const val LOGO_ADVANCE =
         (LOGO_TEXTURE_WIDTH * LOGO_HEIGHT + LOGO_TEXTURE_HEIGHT / 2) / LOGO_TEXTURE_HEIGHT + 1
