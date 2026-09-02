@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/groundsgg/plugin-proxy/compare/v2.2.1...v2.2.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* balance the space above and below the tab logo ([#56](https://github.com/groundsgg/plugin-proxy/issues/56)) ([4a68550](https://github.com/groundsgg/plugin-proxy/commit/4a685508f6c2c8093154d75984a3a133395e4982))
+
 ## [2.2.1](https://github.com/groundsgg/plugin-proxy/compare/v2.2.0...v2.2.1) (2026-09-02)
 
 
