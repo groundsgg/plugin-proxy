@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1](https://github.com/groundsgg/plugin-proxy/compare/v2.2.0...v2.2.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* give the tab logo more space and reduce its size ([#55](https://github.com/groundsgg/plugin-proxy/issues/55)) ([9830d6e](https://github.com/groundsgg/plugin-proxy/commit/9830d6e8ad3093b7888190fa1315201e458ed99c))
+* pad the tab list around the wordmark ([#48](https://github.com/groundsgg/plugin-proxy/issues/48)) ([b012c5a](https://github.com/groundsgg/plugin-proxy/commit/b012c5a971a78eac970bc56cee84748e5acbbdae))
+
 ## [2.2.0](https://github.com/groundsgg/plugin-proxy/compare/v2.1.0...v2.2.0) (2026-08-25)
 
 
