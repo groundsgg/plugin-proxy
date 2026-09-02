@@ -40,6 +40,7 @@ class TabList(
     private val roleQuery: () -> PlayerRoleQuery?,
     private val localeQuery: () -> PlayerLocaleQuery?,
     private val serverQuery: () -> ServerDisplayQuery?,
+    private val isBedrock: (java.util.UUID) -> Boolean = { false },
 ) {
 
     /** Redraws everything [viewer] sees. */
@@ -109,7 +110,9 @@ class TabList(
             val locale =
                 localeQ?.localeOf(entry.profile.id)
                     ?: proxy.getPlayer(entry.profile.id).map { it.effectiveLocale }.orElse(null)
-            entry.setDisplayName(TabName.format(entry.profile.name, locale, role))
+            entry.setDisplayName(
+                TabName.format(entry.profile.name, locale, role, isBedrock(entry.profile.id))
+            )
         }
     }
 

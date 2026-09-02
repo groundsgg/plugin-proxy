@@ -30,6 +30,8 @@ import gg.grounds.proxy.velocity.metrics.ProxySnapshot
 import gg.grounds.proxy.velocity.motd.MotdConfigStore
 import gg.grounds.proxy.velocity.motd.MotdGgClient
 import gg.grounds.proxy.velocity.motd.MotdManager
+import gg.grounds.proxy.velocity.tab.BedrockPlayers
+import gg.grounds.proxy.velocity.tab.BedrockRoster
 import gg.grounds.proxy.velocity.tab.TabList
 import io.nats.client.Subscription
 import java.net.InetSocketAddress
@@ -114,6 +116,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private var countSubscription: Subscription? = null
     private var metrics: ProxyMetrics? = null
     private var tabList: TabList? = null
+    private var bedrockRoster: BedrockRoster? = null
 
     /**
      * The network-wide MOTD, or null when this proxy has no service-config to read it from. Null
@@ -170,6 +173,25 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
         subscribeForProxy()
 
+        val bedrockPlayers = BedrockPlayers.of(logger)
+        val platformSubject = BedrockRoster.subject(System.getenv("GROUNDS_ENVIRONMENT"))
+        val roster =
+            BedrockRoster(
+                System.getenv("PROXY_ID").orEmpty(),
+                { proxy.allPlayers.map { it.uniqueId } },
+                bedrockPlayers::isBedrock,
+                { payload -> platformSubject?.let { natsHandler.publish(it, payload) } },
+            )
+        bedrockRoster = roster
+        if (platformSubject != null) {
+            crossProxySubscriptions += natsHandler.subscribe(platformSubject, roster::receive)
+        } else {
+            logger.warn(
+                "GROUNDS_ENVIRONMENT is unset or invalid; linked Bedrock indicators are local-only"
+            )
+        }
+        roster.refresh()
+
         val messages =
             Translations.forBundle(
                 "gg.grounds.proxy.messages",
@@ -190,13 +212,20 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 roleQuery = { ProxyServiceRegistry.get(PlayerRoleQuery::class.java) },
                 localeQuery = { ProxyServiceRegistry.get(PlayerLocaleQuery::class.java) },
                 serverQuery = { ProxyServiceRegistry.get(ServerDisplayQuery::class.java) },
+                isBedrock = roster::isBedrock,
             )
         tabList = tab
 
         // On a timer as well as on join: the ping and the roster both change with no event to hang
         // off, and a footer that shows the ping from the moment you logged in is worse than none.
         proxy.scheduler
-            .buildTask(this, Runnable { tab.refreshAll() })
+            .buildTask(
+                this,
+                Runnable {
+                    roster.refresh()
+                    tab.refreshAll()
+                },
+            )
             .delay(Duration.ofSeconds(TAB_REFRESH_SECONDS))
             .repeat(Duration.ofSeconds(TAB_REFRESH_SECONDS))
             .schedule()
@@ -309,6 +338,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
     @Subscribe
     fun onLogin(event: PostLoginEvent) {
+        bedrockRoster?.refresh()
         tabList?.refresh(event.player)
     }
 
@@ -323,6 +353,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
     @Subscribe
     fun onShutdown(event: ProxyShutdownEvent) {
+        bedrockRoster?.close()
         ProxyServiceRegistry.unregister(ProxyService::class.java)
         countSubscription?.let { natsHandler.unsubscribe(it) }
         crossProxySubscriptions.forEach { natsHandler.unsubscribe(it) }

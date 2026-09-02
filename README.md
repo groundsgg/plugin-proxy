@@ -121,10 +121,25 @@ allowed can still _show_ the MOTD; `/motd set` then reports the refusal instead 
 
 ## Configuration
 
+The tab list uses compact rank labels (`ADMIN`, `DEV`, `MOD`, `USER`, `SUP`, `BUILD`)
+and the resource pack's `grounds:tab_labels` font. Its five-pixel letters leave one
+transparent pixel above and below the ink. Bedrock players get a bedrock-block
+icon immediately before their name (`U+E004` in `grounds:tab`). Deploy the matching
+resource pack before the proxy update.
+
+Floodgate identifies local Bedrock sessions, including linked Java accounts. Every
+five seconds, proxies exchange edition snapshots on `proxy.platform.<GROUNDS_ENVIRONMENT>`;
+remote snapshots expire after 30 seconds. All proxies in an environment must share
+`GROUNDS_ENVIRONMENT`, have distinct `PROXY_ID` values, and be allowed to publish and
+subscribe to that subject when NATS subject permissions are configured. Without a
+snapshot, unlinked Floodgate UUIDs remain recognizable; linked accounts require
+the originating proxy's snapshot. This cache only controls the visual indicator.
+
 | env                    | meaning                                                                                                                                   |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `NATS_URL`             | broker for `proxy.system.*` / `proxy.transfer.*` (default `nats://nats.infra:4222`)                                                       |
 | `PROXY_ID`             | this proxy's identity, recorded in a player's session — must differ per proxy (`velocity`, `velocity-2`)                                  |
+| `GROUNDS_ENVIRONMENT`  | edition snapshot scope shared by all proxies in the same environment, e.g. `stage`                                                       |
 | `GROUNDS_TOKEN_FILE`   | projected SA-token, presented as the NATS bearer and as the service-config gRPC bearer (default `/var/run/secrets/grounds/token`)         |
 | `CONFIG_SERVICE_URL`   | service-config contract target, e.g. `service-config:9000`. **Unset disables `/motd` entirely** and Velocity's own MOTD is served         |
 | `CONFIG_GRPC_TARGET`   | Legacy fallback for deployments that have not migrated to `CONFIG_SERVICE_URL`                                                            |
