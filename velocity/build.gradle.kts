@@ -40,7 +40,7 @@ dependencies {
     // stored document is, and the logger the manager reports a failed refresh through.
     testImplementation("net.kyori:adventure-text-serializer-legacy:5.2.0")
     testImplementation("com.google.code.gson:gson:2.14.0")
-    testImplementation("org.slf4j:slf4j-api:2.0.18")
+    testImplementation("org.slf4j:slf4j-api:2.0.19")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
 }
