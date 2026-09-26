@@ -87,6 +87,21 @@ internal fun parsePlayerCount(payload: String): Int? {
 }
 
 /**
+ * How long a cached player count is trusted before it is treated as absent.
+ *
+ * Six missed broadcasts (service-player publishes every 5s): long enough that ordinary network
+ * jitter never trips it, short enough that a subscription going quiet — the NATS connection staying
+ * healthy while its callback simply stops delivering, observed in production 2026-09-26 with
+ * nothing logged anywhere — self-heals in well under a minute instead of showing a wrong number
+ * indefinitely.
+ */
+private val PLAYER_COUNT_STALE_AFTER: Duration = Duration.ofSeconds(30)
+
+/** [System.nanoTime] rather than a wall clock: monotonic, so it can't be fooled by a clock step. */
+internal fun isPlayerCountFresh(receivedAtNanos: Long, nowNanos: Long): Boolean =
+    nowNanos - receivedAtNanos <= PLAYER_COUNT_STALE_AFTER.toNanos()
+
+/**
  * Resolves service-config through the platform service contract while keeping old deployments
  * working until every bundle has migrated from the legacy gRPC-specific variable.
  */
@@ -104,15 +119,24 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private lateinit var natsHandler: NatsHandler
     private val crossProxySubscriptions = mutableListOf<Subscription>()
 
+    /** The last network-wide player count service-player published, and when it arrived. */
+    private data class CachedPlayerCount(val total: Int, val receivedAtNanos: Long)
+
+    @Volatile private var cachedPlayerCount: CachedPlayerCount? = null
+
     /**
-     * The last network-wide player count service-player published, or null until the first one
-     * arrives.
+     * [cachedPlayerCount], or null when there has not been one yet or the most recent one is older
+     * than [PLAYER_COUNT_STALE_AFTER].
      *
-     * Null is not zero, and the ping handler treats it that way: before the first broadcast we let
-     * Velocity report its own count rather than claim an empty network. Volatile because it is
-     * written on a NATS dispatcher thread and read on whichever thread answers a ping.
+     * Null is not zero, and every reader treats it that way: before the first broadcast, or once
+     * one has gone stale, we let Velocity report its own count rather than claim an empty network.
      */
-    @Volatile private var networkPlayerCount: Int? = null
+    private val networkPlayerCount: Int?
+        get() =
+            cachedPlayerCount
+                ?.takeIf { isPlayerCountFresh(it.receivedAtNanos, System.nanoTime()) }
+                ?.total
+
     private var countSubscription: Subscription? = null
     private var metrics: ProxyMetrics? = null
     private var tabList: TabList? = null
@@ -165,7 +189,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 if (parsed == null) {
                     logger.warn("Ignoring malformed player-count broadcast: {}", payload)
                 } else {
-                    networkPlayerCount = parsed
+                    cachedPlayerCount = CachedPlayerCount(parsed, System.nanoTime())
                 }
             }
 
