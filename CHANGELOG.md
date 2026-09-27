@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/groundsgg/plugin-proxy/compare/v2.3.0...v2.3.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **proxy:** expire cached network player count after 30s ([#62](https://github.com/groundsgg/plugin-proxy/issues/62)) ([ff21795](https://github.com/groundsgg/plugin-proxy/commit/ff21795ce74c10c3592d52ea84b80ff61b862940))
+
 ## [2.3.0](https://github.com/groundsgg/plugin-proxy/compare/v2.2.2...v2.3.0) (2026-09-02)
 
 
