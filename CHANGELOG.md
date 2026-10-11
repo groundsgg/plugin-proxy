@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.2](https://github.com/groundsgg/plugin-proxy/compare/v2.3.1...v2.3.2) (2026-10-11)
+
+
+### Bug Fixes
+
+* **tab:** drop the language chip from tab list names ([#67](https://github.com/groundsgg/plugin-proxy/issues/67)) ([3eb1946](https://github.com/groundsgg/plugin-proxy/commit/3eb1946a5f78014f72bd867169d092a4c90dc97d))
+
 ## [2.3.1](https://github.com/groundsgg/plugin-proxy/compare/v2.3.0...v2.3.1) (2026-09-27)
 
 
