@@ -4,7 +4,6 @@ import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import gg.grounds.i18n.Palette
 import gg.grounds.i18n.Translations
-import gg.grounds.proxy.api.PlayerLocaleQuery
 import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.ServerDisplayQuery
 import java.time.Year
@@ -23,8 +22,8 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
  * ```
  *              [GROUNDS wordmark]
  *
- *  [DE] [ADMIN]  Steve
- *  [EN] [USER]   Alex
+ *  [ADMIN]  Steve
+ *  [USER]   Alex
  *
  *      Lobby s9fwt              Ping 24 ms
  *              grounds.gg 2026
@@ -38,7 +37,6 @@ class TabList(
     private val proxy: ProxyServer,
     private val messages: Translations,
     private val roleQuery: () -> PlayerRoleQuery?,
-    private val localeQuery: () -> PlayerLocaleQuery?,
     private val serverQuery: () -> ServerDisplayQuery?,
     private val isBedrock: (java.util.UUID) -> Boolean = { false },
 ) {
@@ -95,23 +93,18 @@ class TabList(
     }
 
     /**
-     * Paints each name with language and rank chips, then the name in the role's colour.
+     * Paints each name with its rank chip, then the name in the role's colour.
      *
-     * Locale comes from [PlayerLocaleQuery] when registered, otherwise the locale the client
-     * announced. Rank comes from [PlayerRoleQuery]. A missing query or a missing value omits that
-     * chip rather than drawing a placeholder. Display names are always set so a player with no rank
-     * still shows a language chip.
+     * Rank comes from [PlayerRoleQuery]. A missing query or a missing role omits the chip rather
+     * than drawing a placeholder. Display names are always set so every row is padded to the same
+     * width as the wordmark.
      */
     private fun colourNames(viewer: Player) {
         val query = roleQuery()
-        val localeQ = localeQuery()
         viewer.tabList.entries.forEach { entry ->
             val role = query?.highestRoleOf(entry.profile.id)
-            val locale =
-                localeQ?.localeOf(entry.profile.id)
-                    ?: proxy.getPlayer(entry.profile.id).map { it.effectiveLocale }.orElse(null)
             entry.setDisplayName(
-                TabName.format(entry.profile.name, locale, role, isBedrock(entry.profile.id))
+                TabName.format(entry.profile.name, role, isBedrock(entry.profile.id))
             )
         }
     }

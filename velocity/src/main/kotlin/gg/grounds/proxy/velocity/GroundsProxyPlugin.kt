@@ -234,7 +234,6 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 proxy,
                 messages,
                 roleQuery = { ProxyServiceRegistry.get(PlayerRoleQuery::class.java) },
-                localeQuery = { ProxyServiceRegistry.get(PlayerLocaleQuery::class.java) },
                 serverQuery = { ProxyServiceRegistry.get(ServerDisplayQuery::class.java) },
                 isBedrock = roster::isBedrock,
             )
