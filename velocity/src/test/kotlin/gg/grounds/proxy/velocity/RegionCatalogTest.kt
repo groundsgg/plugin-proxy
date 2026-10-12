@@ -47,4 +47,16 @@ class RegionCatalogTest {
         assertTrue(catalog.problems.isEmpty())
         assertNull(catalog["nl-ams1"])
     }
+
+    /** The catalogue is keyed by continent; comparing with the datacentre never matches. */
+    @Test
+    fun `current code is the continent, not the datacentre`() {
+        assertEquals("eu", RegionCatalog.currentCode(continent = "eu", region = "de-nbg1"))
+    }
+
+    @Test
+    fun `current code falls back to the region when no continent is set`() {
+        assertEquals("nl-ams1", RegionCatalog.currentCode(continent = " ", region = "nl-ams1"))
+        assertNull(RegionCatalog.currentCode(continent = null, region = null))
+    }
 }
