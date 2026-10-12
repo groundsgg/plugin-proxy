@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.3](https://github.com/groundsgg/plugin-proxy/compare/v2.3.2...v2.3.3) (2026-10-12)
+
+
+### Bug Fixes
+
+* **region:** compare /region codes with CONTINENT, not REGION ([#69](https://github.com/groundsgg/plugin-proxy/issues/69)) ([d83e6c7](https://github.com/groundsgg/plugin-proxy/commit/d83e6c7fa8675f90506498ef2fa9b8e1eb8718c1))
+
 ## [2.3.2](https://github.com/groundsgg/plugin-proxy/compare/v2.3.1...v2.3.2) (2026-10-11)
 
 
