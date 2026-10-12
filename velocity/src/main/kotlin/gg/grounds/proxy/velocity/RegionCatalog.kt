@@ -29,6 +29,18 @@ class RegionCatalog(val regions: List<Region>, val problems: List<String>) {
         get() = regions.map { it.code }
 
     companion object {
+        /**
+         * Which catalogue code this proxy answers for. The catalogue is keyed by continent (`eu`),
+         * not by datacentre (`de-nbg1`), so `CONTINENT` is what a code compares against. `REGION`
+         * is the fallback for a catalogue still keyed by datacentre, where the two are the same.
+         */
+        fun currentCode(
+            continent: String? = System.getenv("CONTINENT"),
+            region: String? = System.getenv("REGION"),
+        ): String? =
+            continent?.trim()?.takeIf(String::isNotEmpty)
+                ?: region?.trim()?.takeIf(String::isNotEmpty)
+
         fun fromEnvironment(
             raw: String? = System.getenv("REGIONS"),
             defaultPort: Int = ProxyService.DEFAULT_MINECRAFT_PORT,

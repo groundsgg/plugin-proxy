@@ -170,7 +170,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         // Looked up per invocation rather than captured: the registry is written during startup and
         // a reference taken now could be the one from before another plugin registered.
         val service = { ProxyServiceRegistry.get(ProxyService::class.java) }
-        val region = { System.getenv("REGION")?.trim()?.takeIf(String::isNotEmpty) }
+        val region = { RegionCatalog.currentCode() }
         proxy.commandManager.register("online", OnlineCommand(service))
         proxy.commandManager.register("region", RegionCommand(catalog, region, service))
 
