@@ -3,6 +3,8 @@ package gg.grounds.proxy.velocity.command
 import com.velocitypowered.api.command.CommandSource
 import com.velocitypowered.api.command.SimpleCommand
 import com.velocitypowered.api.proxy.Player
+import gg.grounds.i18n.Translations
+import gg.grounds.proxy.velocity.ProxySystemMessage
 import gg.grounds.proxy.velocity.motd.MotdDocument
 import gg.grounds.proxy.velocity.motd.MotdFormatException
 import gg.grounds.proxy.velocity.motd.MotdGgClient
@@ -28,6 +30,7 @@ class MotdCommand(
     private val manager: MotdManager,
     private val motdGg: MotdGgClient,
     private val async: (Runnable) -> Unit,
+    private val messages: Translations,
     private val counts: () -> Counts,
 ) : SimpleCommand {
 
@@ -53,7 +56,11 @@ class MotdCommand(
             "preview" -> preview(source, rest)
             "help" -> help(source)
             else -> {
-                source.sendMessage(error("Unknown subcommand '$subcommand'."))
+                messages.send(
+                    source,
+                    ProxySystemMessage.MOTD_UNKNOWN_SUBCOMMAND,
+                    "subcommand" to subcommand,
+                )
                 help(source)
             }
         }
@@ -62,28 +69,40 @@ class MotdCommand(
     private fun show(source: CommandSource) {
         val document = manager.current()
         if (document == null) {
-            source.sendMessage(
-                Component.text(
-                    if (manager.loaded()) "No MOTD is set; the proxy default is being served."
-                    else "The MOTD has not been read yet.",
-                    NamedTextColor.YELLOW,
-                )
+            messages.send(
+                source,
+                if (manager.loaded()) ProxySystemMessage.MOTD_NOT_SET
+                else ProxySystemMessage.MOTD_NOT_READ,
             )
             return
         }
-        source.sendMessage(Component.text("--- MOTD ---", NamedTextColor.GOLD))
-        source.sendMessage(label("source", document.source ?: "/motd"))
-        document.updatedBy?.let { source.sendMessage(label("changed by", it)) }
-        document.updatedAt?.let { source.sendMessage(label("changed at", it)) }
-        source.sendMessage(label("max players", document.maxPlayers?.toString() ?: "proxy default"))
-        source.sendMessage(Component.text("raw:", NamedTextColor.GRAY))
+        messages.send(source, ProxySystemMessage.MOTD_HEADER)
+        messages.send(
+            source,
+            ProxySystemMessage.MOTD_SOURCE,
+            "source" to (document.source ?: "/motd"),
+        )
+        document.updatedBy?.let {
+            messages.send(source, ProxySystemMessage.MOTD_CHANGED_BY, "actor" to it)
+        }
+        document.updatedAt?.let {
+            messages.send(source, ProxySystemMessage.MOTD_CHANGED_AT, "time" to it)
+        }
+        document.maxPlayers?.let {
+            messages.send(source, ProxySystemMessage.MOTD_MAX_PLAYERS, "count" to it)
+        } ?: messages.send(source, ProxySystemMessage.MOTD_MAX_PLAYERS_DEFAULT)
+        messages.send(source, ProxySystemMessage.MOTD_RAW)
         source.sendMessage(Component.text(document.text, NamedTextColor.WHITE))
         sendPreview(source, document.text)
     }
 
     private fun set(source: CommandSource, text: String) {
         if (text.isEmpty()) {
-            source.sendMessage(error("Usage: /motd set <MiniMessage>"))
+            messages.send(
+                source,
+                ProxySystemMessage.MOTD_USAGE_SET,
+                "usage" to "/motd set <MiniMessage>",
+            )
             return
         }
         if (!parses(source, text)) return
@@ -91,33 +110,35 @@ class MotdCommand(
 
         val document = (manager.current() ?: MotdDocument(text)).copy(text = text, source = "/motd")
         store(source, document) {
-            source.sendMessage(Component.text("MOTD updated.", NamedTextColor.GREEN))
+            messages.send(source, ProxySystemMessage.MOTD_UPDATED)
             sendPreview(source, text)
         }
     }
 
     private fun import(source: CommandSource, idOrUrl: String) {
         if (idOrUrl.isEmpty()) {
-            source.sendMessage(error("Usage: /motd import <motd.gg link or id>"))
+            messages.send(
+                source,
+                ProxySystemMessage.MOTD_USAGE_IMPORT,
+                "usage" to "/motd import <motd.gg link or id>",
+            )
             return
         }
-        source.sendMessage(Component.text("Fetching from motd.gg...", NamedTextColor.GRAY))
+        messages.send(source, ProxySystemMessage.MOTD_FETCHING)
         async {
             val imported =
                 try {
                     motdGg.import(idOrUrl)
                 } catch (ex: MotdFormatException) {
-                    source.sendMessage(error("Import failed: ${ex.message}"))
+                    messages.send(
+                        source,
+                        ProxySystemMessage.MOTD_IMPORT_FAILED,
+                        "error" to (ex.message ?: ex::class.java.simpleName),
+                    )
                     return@async
                 }
             if (imported.hasFavicon) {
-                source.sendMessage(
-                    Component.text(
-                        "The motd.gg document has a server icon; it was not imported " +
-                            "(the network icon is served from the CDN).",
-                        NamedTextColor.YELLOW,
-                    )
-                )
+                messages.send(source, ProxySystemMessage.MOTD_ICON_SKIPPED)
             }
             val document =
                 (manager.current() ?: MotdDocument(imported.text)).copy(
@@ -125,13 +146,12 @@ class MotdCommand(
                     source = "motd.gg/${imported.id}",
                 )
             writeAndReport(source, document) {
-                source.sendMessage(
-                    Component.text(
-                        "MOTD imported from motd.gg/${imported.id}" +
-                            (imported.name?.let { " ($it)" } ?: "") +
-                            ".",
-                        NamedTextColor.GREEN,
-                    )
+                messages.send(
+                    source,
+                    if (imported.name == null) ProxySystemMessage.MOTD_IMPORTED
+                    else ProxySystemMessage.MOTD_IMPORTED_NAMED,
+                    "id" to imported.id,
+                    "name" to imported.name.orEmpty(),
                 )
                 sendPreview(source, imported.text)
             }
@@ -141,32 +161,37 @@ class MotdCommand(
     private fun maxPlayers(source: CommandSource, argument: String) {
         val document = manager.current()
         if (document == null) {
-            source.sendMessage(
-                error("No MOTD is set — run /motd set first; max players is stored alongside it.")
-            )
+            messages.send(source, ProxySystemMessage.MOTD_REQUIRED_FOR_MAX_PLAYERS)
             return
         }
         val value =
             when {
                 argument.isEmpty() -> {
-                    source.sendMessage(error("Usage: /motd maxplayers <number|clear>"))
+                    messages.send(
+                        source,
+                        ProxySystemMessage.MOTD_USAGE_MAX_PLAYERS,
+                        "usage" to "/motd maxplayers <number|clear>",
+                    )
                     return
                 }
                 argument.equals("clear", true) -> null
                 else ->
                     argument.toIntOrNull()?.takeIf { it >= 0 }
                         ?: run {
-                            source.sendMessage(error("'$argument' is not a player count."))
+                            messages.send(
+                                source,
+                                ProxySystemMessage.MOTD_INVALID_PLAYER_COUNT,
+                                "value" to argument,
+                            )
                             return
                         }
             }
         store(source, document.copy(maxPlayers = value)) {
-            source.sendMessage(
-                Component.text(
-                    if (value == null) "Max players cleared; the proxy value is used again."
-                    else "Max players set to $value.",
-                    NamedTextColor.GREEN,
-                )
+            messages.send(
+                source,
+                if (value == null) ProxySystemMessage.MOTD_MAX_PLAYERS_CLEARED
+                else ProxySystemMessage.MOTD_MAX_PLAYERS_SET,
+                "count" to (value ?: 0),
             )
         }
     }
@@ -176,15 +201,17 @@ class MotdCommand(
         async {
             try {
                 val removed = manager.clear(actor)
-                source.sendMessage(
-                    Component.text(
-                        if (removed) "MOTD removed; the proxy default is served again."
-                        else "There was no MOTD to remove.",
-                        NamedTextColor.GREEN,
-                    )
+                messages.send(
+                    source,
+                    if (removed) ProxySystemMessage.MOTD_REMOVED
+                    else ProxySystemMessage.MOTD_NOTHING_TO_REMOVE,
                 )
             } catch (ex: Exception) {
-                source.sendMessage(error("Could not remove the MOTD: ${describe(ex)}"))
+                messages.send(
+                    source,
+                    ProxySystemMessage.MOTD_REMOVE_FAILED,
+                    "error" to describe(ex),
+                )
             }
         }
     }
@@ -192,7 +219,7 @@ class MotdCommand(
     private fun preview(source: CommandSource, text: String) {
         val subject = text.ifEmpty { manager.current()?.text }
         if (subject == null) {
-            source.sendMessage(error("Nothing to preview: no MOTD is set."))
+            messages.send(source, ProxySystemMessage.MOTD_NOTHING_TO_PREVIEW)
             return
         }
         if (!parses(source, subject)) return
@@ -200,26 +227,22 @@ class MotdCommand(
     }
 
     private fun help(source: CommandSource) {
-        source.sendMessage(Component.text("--- /motd ---", NamedTextColor.GOLD))
+        messages.send(source, ProxySystemMessage.MOTD_HELP_HEADER)
         listOf(
-                "/motd" to "show the MOTD in use",
-                "/motd set <MiniMessage>" to "change it; <newline> starts the second line",
-                "/motd import <link|id>" to "take the design from motd.gg",
-                "/motd maxplayers <n|clear>" to "the number right of the slash",
-                "/motd preview [MiniMessage]" to "render it here without changing anything",
-                "/motd reset" to "remove it and serve the proxy default",
+                ProxySystemMessage.MOTD_HELP_SHOW to "/motd",
+                ProxySystemMessage.MOTD_HELP_SET to "/motd set <MiniMessage>",
+                ProxySystemMessage.MOTD_HELP_IMPORT to "/motd import <link|id>",
+                ProxySystemMessage.MOTD_HELP_MAX_PLAYERS to "/motd maxplayers <n|clear>",
+                ProxySystemMessage.MOTD_HELP_PREVIEW to "/motd preview [MiniMessage]",
+                ProxySystemMessage.MOTD_HELP_RESET to "/motd reset",
             )
-            .forEach { (usage, what) ->
-                source.sendMessage(
-                    Component.text("  $usage", NamedTextColor.WHITE)
-                        .append(Component.text(" — $what", NamedTextColor.GRAY))
-                )
+            .forEach { (key, usage) ->
+                messages.send(source, key, "usage" to usage, "newline" to "<newline>")
             }
-        source.sendMessage(
-            Component.text(
-                "Placeholders: " + MotdPlaceholders.TOKENS.joinToString(", ") { "{{$it}}" },
-                NamedTextColor.GRAY,
-            )
+        messages.send(
+            source,
+            ProxySystemMessage.MOTD_PLACEHOLDERS,
+            "placeholders" to MotdPlaceholders.TOKENS.joinToString(", ") { "{{$it}}" },
         )
     }
 
@@ -237,7 +260,7 @@ class MotdCommand(
             manager.set(document, actorOf(source))
             onSuccess()
         } catch (ex: Exception) {
-            source.sendMessage(error("Could not save the MOTD: ${describe(ex)}"))
+            messages.send(source, ProxySystemMessage.MOTD_SAVE_FAILED, "error" to describe(ex))
         }
     }
 
@@ -246,33 +269,26 @@ class MotdCommand(
             MiniMessage.miniMessage().deserialize(text)
             true
         } catch (ex: ParsingException) {
-            source.sendMessage(error("That is not valid MiniMessage: ${ex.message}"))
+            messages.send(
+                source,
+                ProxySystemMessage.MOTD_INVALID_MINI_MESSAGE,
+                "error" to (ex.message ?: ex::class.java.simpleName),
+            )
             false
         }
 
     private fun warnOnExtraLines(source: CommandSource, text: String) {
         val breaks = LINE_BREAK.findAll(text).count()
         if (breaks > 1) {
-            source.sendMessage(
-                Component.text(
-                    "That is ${breaks + 1} lines; the server list shows two.",
-                    NamedTextColor.YELLOW,
-                )
-            )
+            messages.send(source, ProxySystemMessage.MOTD_EXTRA_LINES, "count" to (breaks + 1))
         }
     }
 
     private fun sendPreview(source: CommandSource, text: String) {
         val counts = counts()
-        source.sendMessage(Component.text("preview:", NamedTextColor.GRAY))
+        messages.send(source, ProxySystemMessage.MOTD_PREVIEW)
         source.sendMessage(manager.preview(text, counts.players, counts.maxPlayers))
     }
-
-    private fun label(name: String, value: String): Component =
-        Component.text("  $name: ", NamedTextColor.GRAY)
-            .append(Component.text(value, NamedTextColor.WHITE))
-
-    private fun error(message: String): Component = Component.text(message, NamedTextColor.RED)
 
     /**
      * The store already unwrapped what service-config wrote for a human — a caller that is not

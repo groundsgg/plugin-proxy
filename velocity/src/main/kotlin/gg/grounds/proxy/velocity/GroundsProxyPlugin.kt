@@ -13,6 +13,8 @@ import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
+import gg.grounds.presentation.VelocitySystemMessages
+import gg.grounds.proxy.api.PlayerMessageRenderers
 import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
@@ -35,8 +37,6 @@ import io.nats.client.Subscription
 import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.concurrent.TimeUnit
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import org.slf4j.Logger
 
@@ -112,6 +112,12 @@ internal fun resolveConfigServiceTarget(
 class GroundsProxyPlugin
 @Inject
 constructor(private val proxy: ProxyServer, private val logger: Logger) {
+    private val messages =
+        Translations.forBundleWithSystemRenderer(
+            "gg.grounds.proxy.messages",
+            javaClass.classLoader,
+            systemRenderer = VelocitySystemMessages.renderer,
+        )
     private lateinit var natsHandler: NatsHandler
     private val crossProxySubscriptions = mutableListOf<Subscription>()
 
@@ -171,14 +177,20 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             System.getenv("GROUNDS_LOBBY_SERVER_PREFIX")?.trim()?.takeIf(String::isNotEmpty)
                 ?: "lobby"
         val region = { RegionCatalog.currentCode() }
-        proxy.commandManager.register("online", OnlineCommand(service))
+        proxy.commandManager.register("online", OnlineCommand(service, messages))
         proxy.commandManager.register(
             "region",
-            RegionCommand(catalog, region, service) { player ->
-                player.currentServer
-                    .map { it.serverInfo.name.startsWith(lobbyServerPrefix, ignoreCase = true) }
-                    .orElse(false)
-            },
+            RegionCommand(
+                catalog,
+                region,
+                service,
+                messages,
+                isOnLobby = { player ->
+                    player.currentServer
+                        .map { it.serverInfo.name.startsWith(lobbyServerPrefix, ignoreCase = true) }
+                        .orElse(false)
+                },
+            ),
         )
 
         // How many players each server holds, answered to a backend that asks. Registered here
@@ -223,7 +235,6 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         }
         roster.refresh()
 
-        val messages = Translations.forBundle("gg.grounds.proxy.messages", javaClass.classLoader)
         // Looked up per call, not captured: plugin-permissions may register after this runs, and a
         // reference taken now would stay null for the life of the proxy.
         val tab =
@@ -302,6 +313,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 manager = manager,
                 motdGg = MotdGgClient("plugin-proxy/${BuildInfo.VERSION} (+https://grounds.gg)"),
                 async = { task -> proxy.scheduler.buildTask(this, task).schedule() },
+                messages = messages,
                 counts = {
                     MotdCommand.Counts(
                         players = networkPlayerCount ?: proxy.playerCount,
@@ -446,7 +458,10 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 CrossProxyMessage.subjectFor(CrossProxyMessage.SYSTEM, proxyId)
             ) { raw ->
                 forTarget(raw, CrossProxyMessage.SYSTEM) { player, payload ->
-                    player.sendMessage(GsonComponentSerializer.gson().deserialize(payload))
+                    val message = GsonComponentSerializer.gson().deserialize(payload)
+                    player.sendMessage(
+                        PlayerMessageRenderers.renderOrOriginal(player.uniqueId, message)
+                    )
                 }
             }
 
@@ -464,8 +479,10 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                         )
                         return@forTarget
                     }
-                    player.sendMessage(
-                        Component.text("Folge Party-Leader zu $serverName...", NamedTextColor.GREEN)
+                    messages.send(
+                        player,
+                        ProxySystemMessage.PARTY_TRANSFER_FOLLOWING,
+                        "server" to serverName,
                     )
                     player.createConnectionRequest(server).fireAndForget()
                 }
