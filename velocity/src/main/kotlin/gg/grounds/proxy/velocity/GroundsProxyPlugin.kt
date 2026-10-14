@@ -166,9 +166,20 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         // Looked up per invocation rather than captured: the registry is written during startup and
         // a reference taken now could be the one from before another plugin registered.
         val service = { ProxyServiceRegistry.get(ProxyService::class.java) }
+        // The same prefix plugin-lobby uses to tell lobbies from other backends.
+        val lobbyServerPrefix =
+            System.getenv("GROUNDS_LOBBY_SERVER_PREFIX")?.trim()?.takeIf(String::isNotEmpty)
+                ?: "lobby"
         val region = { RegionCatalog.currentCode() }
         proxy.commandManager.register("online", OnlineCommand(service))
-        proxy.commandManager.register("region", RegionCommand(catalog, region, service))
+        proxy.commandManager.register(
+            "region",
+            RegionCommand(catalog, region, service) { player ->
+                player.currentServer
+                    .map { it.serverInfo.name.startsWith(lobbyServerPrefix, ignoreCase = true) }
+                    .orElse(false)
+            },
+        )
 
         // How many players each server holds, answered to a backend that asks. Registered here
         // rather than in the lobby's own plugin because the number only exists on this side:

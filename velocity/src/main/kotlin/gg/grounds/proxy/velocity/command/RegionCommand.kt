@@ -17,12 +17,26 @@ import net.kyori.adventure.text.format.NamedTextColor
  *
  * Geo-steering already puts a player in the nearest region; this is the override — for playing with
  * someone on the other side of the world, or for testing a region deliberately.
+ *
+ * A bare `/region` from a player on a lobby is not answered here: the lobby draws a world map for
+ * picking the default region, and Velocity hands a command the proxy declines in [hasPermission] to
+ * the player's current server. Everywhere else the bare command still lists the regions.
  */
 class RegionCommand(
     private val catalog: RegionCatalog,
     private val currentRegion: () -> String?,
     private val proxyService: () -> ProxyService?,
+    private val isOnLobby: (Player) -> Boolean = { false },
 ) : SimpleCommand {
+
+    override fun hasPermission(invocation: SimpleCommand.Invocation): Boolean {
+        val player = invocation.source() as? Player
+        return regionAnswersHere(
+            isPlayer = player != null,
+            hasArguments = invocation.arguments().isNotEmpty(),
+            onLobby = player != null && isOnLobby(player),
+        )
+    }
 
     override fun execute(invocation: SimpleCommand.Invocation) {
         val source = invocation.source()
@@ -98,3 +112,14 @@ class RegionCommand(
         return catalog.codes.filter { it.lowercase().startsWith(typed) }
     }
 }
+
+/**
+ * Whether the proxy handles a `/region`. Only a player's bare command on a lobby is declined, which
+ * makes Velocity forward it to the lobby's world map. Top level so a test can reach it without the
+ * Velocity API, which is compile-only.
+ */
+internal fun regionAnswersHere(
+    isPlayer: Boolean,
+    hasArguments: Boolean,
+    onLobby: Boolean,
+): Boolean = !isPlayer || hasArguments || !onLobby
