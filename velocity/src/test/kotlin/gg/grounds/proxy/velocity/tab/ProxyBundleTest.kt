@@ -2,6 +2,7 @@ package gg.grounds.proxy.velocity.tab
 
 import gg.grounds.i18n.BundleCheck
 import gg.grounds.i18n.SystemCategory
+import gg.grounds.i18n.SystemLevel
 import gg.grounds.i18n.Translations
 import gg.grounds.proxy.velocity.ProxySystemMessage
 import java.util.Locale
@@ -25,13 +26,16 @@ class ProxyBundleTest {
     }
 
     @Test
-    fun `errors warnings and confirmations use their system categories`() {
-        assertEquals(SystemCategory.ERROR, ProxySystemMessage.REGION_UNKNOWN.category)
-        assertEquals(SystemCategory.WARNING, ProxySystemMessage.REGION_ALREADY_HERE.category)
-        assertEquals(SystemCategory.SUCCESS, ProxySystemMessage.REGION_MOVING.category)
-        assertEquals(SystemCategory.ERROR, ProxySystemMessage.MOTD_SAVE_FAILED.category)
-        assertEquals(SystemCategory.WARNING, ProxySystemMessage.MOTD_EXTRA_LINES.category)
-        assertEquals(SystemCategory.SUCCESS, ProxySystemMessage.MOTD_UPDATED.category)
+    fun `proxy feedback keeps general context and uses semantic levels`() {
+        assertEquals(SystemCategory.GENERAL, ProxySystemMessage.REGION_UNKNOWN.category)
+        assertEquals(SystemLevel.ERROR, ProxySystemMessage.REGION_UNKNOWN.level)
+        assertEquals(SystemLevel.WARNING, ProxySystemMessage.REGION_ALREADY_HERE.level)
+        assertEquals(SystemLevel.SUCCESS, ProxySystemMessage.REGION_MOVING.level)
+        assertEquals(SystemLevel.ERROR, ProxySystemMessage.MOTD_SAVE_FAILED.level)
+        assertEquals(SystemLevel.WARNING, ProxySystemMessage.MOTD_EXTRA_LINES.level)
+        assertEquals(SystemLevel.SUCCESS, ProxySystemMessage.MOTD_UPDATED.level)
+        assertEquals(SystemCategory.PARTY, ProxySystemMessage.PARTY_TRANSFER_FOLLOWING.category)
+        assertEquals(SystemLevel.INFO, ProxySystemMessage.PARTY_TRANSFER_FOLLOWING.level)
     }
 
     @Test
