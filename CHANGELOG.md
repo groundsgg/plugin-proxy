@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/groundsgg/plugin-proxy/compare/v2.5.0...v2.6.0) (2026-10-14)
+
+
+### Features
+
+* **chat:** add recipient rendering and appearance APIs ([#77](https://github.com/groundsgg/plugin-proxy/issues/77)) ([b408e15](https://github.com/groundsgg/plugin-proxy/commit/b408e15b024892d74050a922c8860f6659154d4f))
+
 ## [2.5.0](https://github.com/groundsgg/plugin-proxy/compare/v2.4.0...v2.5.0) (2026-10-14)
 
 
