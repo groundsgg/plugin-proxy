@@ -39,6 +39,10 @@ object ProxyServiceRegistry {
         services[serviceClass] = instance
     }
 
+    /** Publishes only when no provider already owns [serviceClass]. */
+    fun <T : Any> registerIfAbsent(serviceClass: Class<T>, instance: T): Boolean =
+        services.putIfAbsent(serviceClass, instance) == null
+
     /** The registered implementation, or null when no plugin provides it. */
     fun <T : Any> get(serviceClass: Class<T>): T? {
         return serviceClass.cast(services[serviceClass])
@@ -47,5 +51,17 @@ object ProxyServiceRegistry {
     /** Withdraws the implementation. Providers call this on `ProxyShutdownEvent`. */
     fun <T : Any> unregister(serviceClass: Class<T>) {
         services.remove(serviceClass)
+    }
+
+    /** Withdraws [instance] only while it still owns [serviceClass]. */
+    fun <T : Any> unregister(serviceClass: Class<T>, instance: T): Boolean {
+        var removed = false
+        services.computeIfPresent(serviceClass) { _, current ->
+            if (current === instance) {
+                removed = true
+                null
+            } else current
+        }
+        return removed
     }
 }

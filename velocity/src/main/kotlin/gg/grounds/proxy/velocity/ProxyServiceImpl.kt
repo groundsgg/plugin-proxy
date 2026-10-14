@@ -3,6 +3,7 @@ package gg.grounds.proxy.velocity
 import com.velocitypowered.api.proxy.ProxyServer
 import gg.grounds.proxy.api.NetworkPlayerCounts
 import gg.grounds.proxy.api.NetworkProxyCounts
+import gg.grounds.proxy.api.PlayerMessageRenderers
 import gg.grounds.proxy.api.PlayerPresence
 import gg.grounds.proxy.api.PlayerSessionQuery
 import gg.grounds.proxy.api.ProxyService
@@ -84,7 +85,7 @@ class ProxyServiceImpl(
     override fun sendToPlayer(targetId: UUID, message: Component) {
         val local = proxy.getPlayer(targetId).orElse(null)
         if (local != null) {
-            local.sendMessage(message)
+            local.sendMessage(PlayerMessageRenderers.renderOrOriginal(targetId, message))
         } else {
             val json = GsonComponentSerializer.gson().serialize(message)
             publishToHolder(CrossProxyMessage.SYSTEM, targetId, json)

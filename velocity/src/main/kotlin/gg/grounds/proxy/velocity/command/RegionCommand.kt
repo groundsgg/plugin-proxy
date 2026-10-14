@@ -2,10 +2,10 @@ package gg.grounds.proxy.velocity.command
 
 import com.velocitypowered.api.command.SimpleCommand
 import com.velocitypowered.api.proxy.Player
+import gg.grounds.i18n.Translations
 import gg.grounds.proxy.api.ProxyService
+import gg.grounds.proxy.velocity.ProxySystemMessage
 import gg.grounds.proxy.velocity.RegionCatalog
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 
 /**
  * `/region` — see which regions exist and move to one.
@@ -26,6 +26,7 @@ class RegionCommand(
     private val catalog: RegionCatalog,
     private val currentRegion: () -> String?,
     private val proxyService: () -> ProxyService?,
+    private val messages: Translations,
     private val isOnLobby: (Player) -> Boolean = { false },
 ) : SimpleCommand {
 
@@ -42,16 +43,12 @@ class RegionCommand(
         val source = invocation.source()
         val player = source as? Player
         if (player == null) {
-            source.sendMessage(
-                Component.text("Only a player can change region.", NamedTextColor.RED)
-            )
+            messages.send(source, ProxySystemMessage.REGION_PLAYER_ONLY)
             return
         }
 
         if (catalog.regions.isEmpty()) {
-            source.sendMessage(
-                Component.text("No regions are configured on this proxy.", NamedTextColor.RED)
-            )
+            messages.send(source, ProxySystemMessage.REGION_NONE)
             return
         }
 
@@ -63,48 +60,44 @@ class RegionCommand(
 
         val target = catalog[requested]
         if (target == null) {
-            player.sendMessage(
-                Component.text(
-                    "Unknown region '$requested'. Available: ${catalog.codes.joinToString(", ")}",
-                    NamedTextColor.RED,
-                )
+            messages.send(
+                player,
+                ProxySystemMessage.REGION_UNKNOWN,
+                "region" to requested,
+                "available" to catalog.codes.joinToString(", "),
             )
             return
         }
 
         val here = currentRegion()
         if (here != null && target.code.equals(here, true)) {
-            player.sendMessage(
-                Component.text("You are already in ${target.code}.", NamedTextColor.YELLOW)
-            )
+            messages.send(player, ProxySystemMessage.REGION_ALREADY_HERE, "region" to target.code)
             return
         }
 
         val service = proxyService()
         if (service == null) {
-            player.sendMessage(
-                Component.text("Region switching is unavailable right now.", NamedTextColor.RED)
-            )
+            messages.send(player, ProxySystemMessage.REGION_UNAVAILABLE)
             return
         }
 
-        player.sendMessage(Component.text("Moving you to ${target.code}...", NamedTextColor.GREEN))
+        messages.send(player, ProxySystemMessage.REGION_MOVING, "region" to target.code)
         service.transferToHost(player.uniqueId, target.host, target.port)
     }
 
     private fun sendList(player: Player) {
         val here = currentRegion()
-        player.sendMessage(Component.text("--- Regions ---", NamedTextColor.GOLD))
+        messages.send(player, ProxySystemMessage.REGION_HEADER)
         catalog.regions.forEach { region ->
             val isHere = here != null && region.code.equals(here, true)
-            player.sendMessage(
-                Component.text(
-                        if (isHere) "  ${region.code} (you are here)" else "  ${region.code}"
-                    )
-                    .color(if (isHere) NamedTextColor.GREEN else NamedTextColor.GRAY)
+            messages.send(
+                player,
+                if (isHere) ProxySystemMessage.REGION_ENTRY_CURRENT
+                else ProxySystemMessage.REGION_ENTRY,
+                "region" to region.code,
             )
         }
-        player.sendMessage(Component.text("Use /region <code> to move.", NamedTextColor.GRAY))
+        messages.send(player, ProxySystemMessage.REGION_USAGE, "syntax" to "/region <code>")
     }
 
     override fun suggest(invocation: SimpleCommand.Invocation): List<String> {
