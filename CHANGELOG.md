@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/groundsgg/plugin-proxy/compare/v2.4.0...v2.5.0) (2026-10-14)
+
+
+### Features
+
+* **proxy:** hand a bare /region on a lobby to the lobby's world map ([#75](https://github.com/groundsgg/plugin-proxy/issues/75)) ([f762c69](https://github.com/groundsgg/plugin-proxy/commit/f762c697be06f3166e7e9111855e165b161a0836))
+
 ## [2.4.0](https://github.com/groundsgg/plugin-proxy/compare/v2.3.3...v2.4.0) (2026-10-14)
 
 
