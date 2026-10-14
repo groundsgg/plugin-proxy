@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/groundsgg/plugin-proxy/compare/v2.3.3...v2.4.0) (2026-10-14)
+
+
+### Features
+
+* **i18n:** add de/fr/es tab-list bundles checked by BundleCheck ([#72](https://github.com/groundsgg/plugin-proxy/issues/72)) ([dab0ced](https://github.com/groundsgg/plugin-proxy/commit/dab0ceddd27191b18fa26ce1452218e95cfdd845))
+
 ## [2.3.3](https://github.com/groundsgg/plugin-proxy/compare/v2.3.2...v2.3.3) (2026-10-12)
 
 
