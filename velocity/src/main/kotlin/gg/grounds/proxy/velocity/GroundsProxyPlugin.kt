@@ -12,9 +12,7 @@ import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
 import gg.grounds.BuildInfo
-import gg.grounds.i18n.LocaleResolver
 import gg.grounds.i18n.Translations
-import gg.grounds.proxy.api.PlayerLocaleQuery
 import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
@@ -36,9 +34,7 @@ import gg.grounds.proxy.velocity.tab.TabList
 import io.nats.client.Subscription
 import java.net.InetSocketAddress
 import java.time.Duration
-import java.util.UUID
 import java.util.concurrent.TimeUnit
-import net.kyori.adventure.identity.Identity
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
@@ -216,17 +212,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         }
         roster.refresh()
 
-        val messages =
-            Translations.forBundle(
-                "gg.grounds.proxy.messages",
-                javaClass.classLoader,
-                localeResolver =
-                    LocaleResolver { audience ->
-                        ProxyServiceRegistry.get(PlayerLocaleQuery::class.java)?.let { query ->
-                            audience.get(Identity.UUID).map(query::localeOf).orElse(null)
-                        } ?: LocaleResolver.FROM_AUDIENCE.localeOf(audience)
-                    },
-            )
+        val messages = Translations.forBundle("gg.grounds.proxy.messages", javaClass.classLoader)
         // Looked up per call, not captured: plugin-permissions may register after this runs, and a
         // reference taken now would stay null for the life of the proxy.
         val tab =
