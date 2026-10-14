@@ -19,7 +19,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.14.0")
     // The tab list header and footer are player-facing text, so they come from a bundle and are
     // drawn in the design tokens, like every other line the network shows a player.
-    implementation("gg.grounds:library-i18n:0.3.0")
+    implementation("gg.grounds:library-i18n:0.4.0")
     implementation("io.nats:jnats:2.26.4")
 
     // The metrics endpoint. Micrometer rather than a hand-written exposition format, because its
