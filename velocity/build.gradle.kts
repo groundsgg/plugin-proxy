@@ -44,3 +44,11 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
 }
+
+// Keep the publishing artifact version with its catalog when bundled into a host JAR.
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    inputs.property("permissionManifestVersion", project.version.toString())
+    filesMatching("META-INF/grounds/permissions/*.json") {
+        expand("version" to project.version.toString())
+    }
+}
