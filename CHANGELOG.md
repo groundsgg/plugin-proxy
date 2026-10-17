@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.7.0](https://github.com/groundsgg/plugin-proxy/compare/v2.6.1...v2.7.0) (2026-10-17)
+
+
+### Features
+
+* **catalog:** publish versioned permission manifest ([#86](https://github.com/groundsgg/plugin-proxy/issues/86)) ([697da2a](https://github.com/groundsgg/plugin-proxy/commit/697da2ac9972ce290d44abbfd870eee7f3dbb3bf))
+
+
+### Bug Fixes
+
+* **chat:** align context and message-level colors ([#82](https://github.com/groundsgg/plugin-proxy/issues/82)) ([eb816bb](https://github.com/groundsgg/plugin-proxy/commit/eb816bb5d65e146f014847fc2b96f6b12ce56e27))
+* **tab:** render native rank badges for Bedrock viewers ([#84](https://github.com/groundsgg/plugin-proxy/issues/84)) ([73a1266](https://github.com/groundsgg/plugin-proxy/commit/73a1266519a067f3fe986bba11f51e09e4fa06b8))
+* **tab:** simplify footer and retain the initial rank badge ([#85](https://github.com/groundsgg/plugin-proxy/issues/85)) ([64a9624](https://github.com/groundsgg/plugin-proxy/commit/64a9624b0f3f2a415885634da453d580af6731a8))
+
 ## [2.6.1](https://github.com/groundsgg/plugin-proxy/compare/v2.6.0...v2.6.1) (2026-10-17)
 
 
