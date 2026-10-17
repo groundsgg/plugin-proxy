@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.1](https://github.com/groundsgg/plugin-proxy/compare/v2.6.0...v2.6.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **build:** resolve dependencies through the runner mirror in Docker builds ([#79](https://github.com/groundsgg/plugin-proxy/issues/79)) ([57b0355](https://github.com/groundsgg/plugin-proxy/commit/57b0355aa10a7b4fb1ebd07a248bb4f7d1acdd92))
+* **chat:** use the shared system message layout ([#81](https://github.com/groundsgg/plugin-proxy/issues/81)) ([183f9ac](https://github.com/groundsgg/plugin-proxy/commit/183f9ac07848ec44396564efdad5d260732bfa9d))
+
 ## [2.6.0](https://github.com/groundsgg/plugin-proxy/compare/v2.5.0...v2.6.0) (2026-10-14)
 
 
