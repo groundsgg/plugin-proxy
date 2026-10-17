@@ -130,8 +130,12 @@ shown as a dash rather than a misleading proxy-local total.
 `/proxydebug` shows the actual backend and proxy identifiers to players with
 `grounds.proxy.debug`. The node is declared in the plugin's permission catalog for autocomplete.
 Minestom's permissions module supplies the initial rank-formatted tab entry before ADD_PLAYER is
-sent. While a remote display lookup warms up, the proxy briefly retains that supplied badge;
-confirmed missing local ranks and unresolved remote ranks after the bounded grace are cleared.
+sent. While a remote display lookup warms up, the proxy retains that supplied badge for at most
+five minutes, covering the bounded queue of 128 requests with two-second HTTP timeouts. A resolved
+role replaces it immediately; a missing local rank clears immediately. A completely unresolved or
+empty remote result can retain the backend display until that limit, then it is cleared. This is
+display metadata only and never supplies permission grants. Active expired entries cannot be
+re-armed by another viewer during capacity cleanup.
 
 ## Configuration
 
