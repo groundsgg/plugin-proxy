@@ -119,6 +119,20 @@ Writes go to `ConfigAdminService`, which service-config restricts to admin servi
 writers explicitly allowed for the app — see `GROUNDS_CONFIG_WRITERS` there. A proxy that is not
 allowed can still _show_ the MOTD; `/motd set` then reports the refusal instead of failing silently.
 
+## Tab footer and diagnostics
+
+The footer is one localized status line, for example `Lobby 2 • 42 players online • 17 ms`.
+The server number is its deterministic position among the currently registered servers of the
+same kind, not a pod identifier. All proxies with the same discovery inventory show the same
+numbers. The online count uses the existing fresh network-wide broadcast; an unknown count is
+shown as a dash rather than a misleading proxy-local total.
+
+`/proxydebug` shows the actual backend and proxy identifiers to players with
+`grounds.proxy.debug`. The node is declared in the plugin's permission catalog for autocomplete.
+Minestom's permissions module supplies the initial rank-formatted tab entry before ADD_PLAYER is
+sent. While a remote display lookup warms up, the proxy briefly retains that supplied badge;
+confirmed missing local ranks and unresolved remote ranks after the bounded grace are cleared.
+
 ## Configuration
 
 The tab list uses compact rank labels (`ADMIN`, `DEV`, `MOD`, `USER`, `SUP`, `BUILD`)

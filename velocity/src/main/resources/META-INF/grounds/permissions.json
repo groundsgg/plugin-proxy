@@ -1,0 +1,21 @@
+{
+  "source": "plugin-proxy",
+  "permissions": [
+    {
+      "key": "grounds.proxy.debug",
+      "label": "Proxy diagnostics",
+      "description": "Allows viewing technical backend and proxy identifiers with /proxydebug.",
+      "supportedScopes": [
+        "GLOBAL"
+      ]
+    },
+    {
+      "key": "grounds.motd.manage",
+      "label": "Manage proxy MOTD",
+      "description": "Allows managing the network server-list MOTD with /motd.",
+      "supportedScopes": [
+        "GLOBAL"
+      ]
+    }
+  ]
+}

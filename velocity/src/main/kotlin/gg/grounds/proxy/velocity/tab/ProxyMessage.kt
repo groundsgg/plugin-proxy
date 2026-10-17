@@ -14,4 +14,6 @@ enum class ProxyMessage(override val id: String) : MessageKey {
     TAB_SERVER_LOBBY("tab.server.lobby"),
     TAB_SERVER_GAME("tab.server.game"),
     TAB_SERVER_MATCH("tab.server.match"),
+    TAB_SERVER_BUILD("tab.server.build"),
+    TAB_SERVER_UNKNOWN("tab.server.unknown"),
 }

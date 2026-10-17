@@ -2,7 +2,6 @@ package gg.grounds.proxy.velocity.tab
 
 import gg.grounds.i18n.Palette
 import gg.grounds.i18n.Translations
-import java.time.Year
 import java.util.Locale
 import java.util.ResourceBundle
 import net.kyori.adventure.text.Component
@@ -31,7 +30,7 @@ class TabListTest {
                 Locale.ENGLISH,
                 "server" to server,
                 "ping" to TabList.ping(ping),
-                "year" to Year.now().value.toString(),
+                "online" to "42",
             )
         )
 
@@ -67,20 +66,21 @@ class TabListTest {
     }
 
     @Test
-    fun `the footer carries the server, the ping and the domain`() {
-        val rendered = footer("Lobby s9fwt", 24)
-        assertTrue(rendered.contains("Lobby s9fwt"), rendered)
-        assertTrue(rendered.contains("24 ms"), rendered)
-        assertTrue(rendered.contains("grounds.gg ${Year.now().value}"), rendered)
+    fun `the footer carries the friendly server network count and ping`() {
+        val rendered = footer("Lobby 2", 17)
+        assertTrue(rendered.contains("Lobby 2"), rendered)
+        assertTrue(rendered.contains("17 ms"), rendered)
+        assertTrue(rendered.contains("42 players online"), rendered)
+        assertFalse(rendered.contains("grounds.gg"), rendered)
         assertFalse(rendered.contains("nl-ams1"), rendered)
     }
 
     @Test
-    fun `the footer is two lines - the domain sits under the status`() {
-        val rendered = footer("nl-ams1", 24)
+    fun `the footer is one status line separated by dots`() {
+        val rendered = footer("Lobby 2", 17)
         val body = rendered.trim().lines()
-        assertEquals(2, body.size, rendered)
-        assertTrue(body.last().contains("grounds.gg"), rendered)
+        assertEquals(1, body.size, rendered)
+        assertEquals("Lobby 2 • 42 players online • 17 ms", body.single())
     }
 
     /** Hard-coding the year is how a footer ends up saying 2026 in 2029. */

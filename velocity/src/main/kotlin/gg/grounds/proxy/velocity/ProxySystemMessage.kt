@@ -10,6 +10,10 @@ enum class ProxySystemMessage(
     override val category: SystemCategory = SystemCategory.GENERAL,
     override val level: SystemLevel = SystemLevel.INFO,
 ) : SystemMessageKey {
+    DEBUG_PLAYER_ONLY("debug.player-only", level = SystemLevel.ERROR),
+    DEBUG_DENIED("debug.denied", level = SystemLevel.ERROR),
+    DEBUG_SERVER("debug.server"),
+    DEBUG_PROXY("debug.proxy"),
     ONLINE_UNAVAILABLE("online.unavailable", level = SystemLevel.ERROR),
     ONLINE_HEADER("online.header"),
     ONLINE_NOBODY("online.nobody"),

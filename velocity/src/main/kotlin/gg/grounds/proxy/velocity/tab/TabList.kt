@@ -6,7 +6,6 @@ import gg.grounds.i18n.Palette
 import gg.grounds.i18n.Translations
 import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.ServerDisplayQuery
-import java.time.Year
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 
@@ -25,8 +24,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
  *  [ADMIN]  Steve
  *  [USER]   Alex
  *
- *      Lobby s9fwt              Ping 24 ms
- *              grounds.gg 2026
+ *          Lobby 2 • 42 players online • 24 ms
  * ```
  *
  * The ping is coloured by how bad it is, using the state colours rather than a number nobody reads:
@@ -39,7 +37,9 @@ class TabList(
     private val roleQuery: () -> PlayerRoleQuery?,
     private val serverQuery: () -> ServerDisplayQuery?,
     private val isBedrock: (java.util.UUID) -> Boolean = { false },
+    private val onlineCount: () -> Int? = { null },
 ) {
+    private val rankWarmup = RankWarmup()
 
     /** Redraws everything [viewer] sees. */
     fun refresh(viewer: Player) {
@@ -66,19 +66,24 @@ class TabList(
             viewer,
             "server" to serverLabel(viewer),
             "ping" to ping(viewer.ping),
-            "year" to Year.now().value.toString(),
+            "online" to (onlineCount()?.toString() ?: "—"),
         )
 
     private fun serverLabel(viewer: Player): Component {
         val raw =
             viewer.currentServer.map { it.serverInfo.name }.orElse(null)
                 ?: return Component.text(UNKNOWN, Palette.TEXT_FAINT)
-        val queried = serverQuery()?.displayOf(raw)
-        val id = queried?.id ?: ServerDisplayIds.idOf(raw)
-        val kind = queried?.kind
-        val kindLabel = kindLabel(kind, viewer)
-        val text = if (kindLabel == null) id else "$kindLabel $id"
-        return Component.text(text, Palette.TEXT)
+        val query = serverQuery()
+        val kind = query?.displayOf(raw)?.kind
+        val label =
+            kindLabel(kind, viewer)
+                ?: plain(messages.render(ProxyMessage.TAB_SERVER_UNKNOWN, viewer))
+        val peers =
+            proxy.allServers
+                .map { it.serverInfo.name }
+                .filter { query?.displayOf(it)?.kind == kind }
+        val number = ServerDisplayIds.numberOf(raw, peers)
+        return Component.text("$label $number", Palette.TEXT)
     }
 
     private fun kindLabel(kind: String?, viewer: Player): String? {
@@ -87,7 +92,8 @@ class TabList(
                 "lobby" -> ProxyMessage.TAB_SERVER_LOBBY
                 "game" -> ProxyMessage.TAB_SERVER_GAME
                 "match" -> ProxyMessage.TAB_SERVER_MATCH
-                else -> return kind
+                "static" -> ProxyMessage.TAB_SERVER_BUILD
+                else -> return null
             }
         return plain(messages.render(key, viewer))
     }
@@ -103,14 +109,27 @@ class TabList(
         val query = roleQuery()
         viewer.tabList.entries.forEach { entry ->
             val role = query?.highestRoleOf(entry.profile.id)
-            entry.setDisplayName(
+            val supplied = entry.displayNameComponent.orElse(null)
+            if (
+                role == null &&
+                    rankWarmup.keep(
+                        entry.profile.id,
+                        supplied?.let(::plain)?.firstOrNull()?.let {
+                            it == TabGlyphs.BADGE_LEFT || it in '\uE600'..'\uE6FF'
+                        } == true,
+                        proxy.getPlayer(entry.profile.id).isPresent,
+                    )
+            )
+                return@forEach
+            if (role != null) rankWarmup.clear(entry.profile.id)
+            val formatted =
                 TabName.format(
                     entry.profile.name,
                     role,
                     isBedrock(entry.profile.id),
                     bedrockViewer = isBedrock(viewer.uniqueId),
                 )
-            )
+            if (supplied != formatted) entry.setDisplayName(formatted)
         }
     }
 
