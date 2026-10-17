@@ -66,21 +66,13 @@ class TabListTest {
     }
 
     @Test
-    fun `the footer carries the friendly server network count and ping`() {
-        val rendered = footer("Lobby 2", 17)
-        assertTrue(rendered.contains("Lobby 2"), rendered)
-        assertTrue(rendered.contains("17 ms"), rendered)
-        assertTrue(rendered.contains("42 players online"), rendered)
-        assertFalse(rendered.contains("grounds.gg"), rendered)
-        assertFalse(rendered.contains("nl-ams1"), rendered)
-    }
-
-    @Test
-    fun `the footer is one status line separated by dots`() {
-        val rendered = footer("Lobby 2", 17)
-        val body = rendered.trim().lines()
-        assertEquals(1, body.size, rendered)
-        assertEquals("Lobby 2 • 42 players online • 17 ms", body.single())
+    fun `the footer contains only the server type and domain in every locale`() {
+        for (locale in
+            listOf(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH, Locale.forLanguageTag("es"))) {
+            val rendered =
+                plain(messages.render(ProxyMessage.TAB_FOOTER, locale, "server" to "Lobby"))
+            assertEquals(listOf("Lobby", "grounds.gg"), rendered.trim().lines())
+        }
     }
 
     /** Hard-coding the year is how a footer ends up saying 2026 in 2029. */
