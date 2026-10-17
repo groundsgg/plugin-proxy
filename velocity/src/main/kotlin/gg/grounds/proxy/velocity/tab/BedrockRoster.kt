@@ -46,7 +46,9 @@ internal class BedrockRoster(
         current?.players?.get(id)?.let {
             return it
         }
-        return true.takeIf { BedrockPlayers.isBedrockUuid(id) }
+        // A UUID pattern is only a convention, not authenticated edition evidence. If no current
+        // proxy snapshot can classify this profile, leave its display unchanged.
+        return null
     }
 
     fun receive(raw: String) {

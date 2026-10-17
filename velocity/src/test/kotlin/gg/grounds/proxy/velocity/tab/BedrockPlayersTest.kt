@@ -30,9 +30,9 @@ class BedrockPlayersTest {
     }
 
     @Test
-    fun `missing or incompatible API degrades to XUID-derived Bedrock UUID detection`() {
+    fun `missing or incompatible API never treats UUID shape as edition proof`() {
         val id = UUID.fromString("00000000-0000-0000-0009-01f64d9a38a8")
-        assertTrue(BedrockPlayers(logger) { null }.isBedrock(id))
+        assertFalse(BedrockPlayers(logger) { null }.isBedrock(id))
         assertFalse(BedrockPlayers(logger) { String::class.java }.isBedrock(ordinaryUuid))
     }
 }
