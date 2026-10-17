@@ -73,9 +73,11 @@ class BedrockRosterTest {
     }
 
     @Test
-    fun `unlinked Floodgate UUID is recognized before a snapshot arrives`() {
+    fun `UUID shape without a verified Floodgate snapshot is unknown`() {
         val roster = BedrockRoster("java", { emptyList() }, { false }, {})
-        assertTrue(roster.isBedrock(UUID.fromString("00000000-0000-0000-0009-01f64d9a38a8")))
+        val xuidShaped = UUID.fromString("00000000-0000-0000-0009-01f64d9a38a8")
+        assertNull(roster.classification(xuidShaped))
+        assertFalse(roster.isBedrock(xuidShaped))
         assertFalse(roster.isBedrock(UUID(0, 0)))
         assertFalse(roster.isBedrock(java))
     }

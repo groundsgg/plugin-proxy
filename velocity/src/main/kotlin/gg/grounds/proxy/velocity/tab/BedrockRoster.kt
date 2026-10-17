@@ -5,7 +5,7 @@ import com.google.gson.JsonParser
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/** Short-lived edition snapshots let Java proxies label linked Bedrock accounts too. */
+/** Short-lived edition snapshots let Java proxies label Bedrock profiles connected elsewhere. */
 internal class BedrockRoster(
     private val proxyId: String,
     private val connectedPlayers: () -> Collection<UUID>,
@@ -31,6 +31,10 @@ internal class BedrockRoster(
     }
 
     fun isBedrock(id: UUID): Boolean {
+        return classification(id) ?: false
+    }
+
+    fun classification(id: UUID): Boolean? {
         local[id]?.let {
             return it
         }
@@ -39,7 +43,12 @@ internal class BedrockRoster(
             remote.values
                 .filter { now - it.receivedAt < EXPIRY_MILLIS && id in it.players }
                 .maxByOrNull { it.receivedAt }
-        return current?.players?.get(id) ?: BedrockPlayers.isUnlinkedUuid(id)
+        current?.players?.get(id)?.let {
+            return it
+        }
+        // A UUID pattern is only a convention, not authenticated edition evidence. If no current
+        // proxy snapshot can classify this profile, leave its display unchanged.
+        return null
     }
 
     fun receive(raw: String) {

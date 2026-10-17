@@ -72,13 +72,16 @@ interface ProxyService {
      * Works for a player on another proxy too — the request travels over NATS to whichever proxy
      * holds them, exactly like [transferPlayer].
      *
-     * Returns false only when the player is not online anywhere. A transfer that reaches the client
-     * and fails there cannot be observed from here; the client falls back to the server list.
+     * Returns false when the player is offline or the active proxy cannot authorize a safe session
+     * handoff (for example, an unsupported client or missing session coordinator). A transfer that
+     * reaches the client and fails there cannot be observed from here; the client falls back to the
+     * server list.
      */
     fun transferToHost(playerId: UUID, host: String, port: Int = DEFAULT_MINECRAFT_PORT): Boolean
 
     /**
-     * Transfers every player on *this* proxy to [host], and returns how many were sent.
+     * Transfers eligible players on *this* proxy to [host], and returns how many received a session
+     * handoff and transfer packet.
      *
      * Deliberately local: draining means emptying the proxy you are draining, and a call that could
      * empty someone else's is a foot-gun with no use case. Run it on each proxy you want emptied.
