@@ -2,6 +2,14 @@
   "source": "plugin-proxy",
   "permissions": [
     {
+      "key": "grounds.proxy.debug",
+      "label": "Proxy diagnostics",
+      "description": "Allows viewing technical backend and proxy identifiers with /proxydebug.",
+      "supportedScopes": [
+        "GLOBAL"
+      ]
+    },
+    {
       "key": "grounds.motd.manage",
       "label": "Manage the MOTD",
       "description": "View and change the proxy message of the day.",
