@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.1](https://github.com/groundsgg/plugin-proxy/compare/v2.7.0...v2.7.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **badges:** add the moss-green MOD variant ([#87](https://github.com/groundsgg/plugin-proxy/issues/87)) ([ae2f64d](https://github.com/groundsgg/plugin-proxy/commit/ae2f64da0fc857278c82f3a2150fe2f0dc3c357f))
+* **tab:** retain initial ranks while remote queues drain ([#89](https://github.com/groundsgg/plugin-proxy/issues/89)) ([c9c1415](https://github.com/groundsgg/plugin-proxy/commit/c9c1415bb85f6749d58accde8ee71e172c47bd86))
+
 ## [2.7.0](https://github.com/groundsgg/plugin-proxy/compare/v2.6.1...v2.7.0) (2026-10-17)
 
 
