@@ -129,6 +129,12 @@ shown as a dash rather than a misleading proxy-local total.
 
 `/proxydebug` shows the actual backend and proxy identifiers to players with
 `grounds.proxy.debug`. The node is declared in the plugin's permission catalog for autocomplete.
+
+`/proxy` lists the proxies that hold players; `/proxy <id>` (full pod name or its last segment)
+moves you to that proxy, for players with `grounds.proxy.switch`. No address reaches one proxy, so
+the player is transferred back through the region's own `REGIONS` address with the target in a
+cookie, and each proxy they land on either keeps them or sends them round again, at most eight
+times. Java 1.20.5+ only, and every miss costs one lobby load.
 Minestom's permissions module supplies the initial rank-formatted tab entry before ADD_PLAYER is
 sent. While a remote display lookup warms up, the proxy retains that supplied badge for at most
 five minutes, covering the bounded queue of 128 requests with two-second HTTP timeouts. A resolved

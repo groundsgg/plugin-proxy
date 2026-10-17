@@ -23,10 +23,12 @@ import gg.grounds.proxy.api.ProxyServiceRegistry
 import gg.grounds.proxy.api.ServerDisplayQuery
 import gg.grounds.proxy.velocity.command.MotdCommand
 import gg.grounds.proxy.velocity.command.OnlineCommand
+import gg.grounds.proxy.velocity.command.ProxyCommand
 import gg.grounds.proxy.velocity.command.ProxyDebugCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import gg.grounds.proxy.velocity.listener.LobbyCountsListener
+import gg.grounds.proxy.velocity.listener.ProxyHopListener
 import gg.grounds.proxy.velocity.metrics.MetricsConfig
 import gg.grounds.proxy.velocity.metrics.ProxyMetrics
 import gg.grounds.proxy.velocity.metrics.ProxySnapshot
@@ -255,6 +257,19 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             )
         tabList = tab
         proxy.commandManager.register("proxydebug", ProxyDebugCommand(messages))
+
+        val proxyId = System.getenv("PROXY_ID").orEmpty()
+        val hops =
+            ProxyHopListener(
+                this,
+                proxy,
+                proxyId,
+                address = { region()?.let { catalog[it] } },
+                messages,
+                logger,
+            )
+        proxy.eventManager.register(this, hops)
+        proxy.commandManager.register("proxy", ProxyCommand(proxyId, service, hops, messages))
 
         // On a timer as well as on join: the ping and the roster both change with no event to hang
         // off, and a footer that shows the ping from the moment you logged in is worse than none.
