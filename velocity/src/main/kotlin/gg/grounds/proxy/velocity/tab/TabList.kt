@@ -104,7 +104,12 @@ class TabList(
         viewer.tabList.entries.forEach { entry ->
             val role = query?.highestRoleOf(entry.profile.id)
             entry.setDisplayName(
-                TabName.format(entry.profile.name, role, isBedrock(entry.profile.id))
+                TabName.format(
+                    entry.profile.name,
+                    role,
+                    isBedrock(entry.profile.id),
+                    bedrockViewer = isBedrock(viewer.uniqueId),
+                )
             )
         }
     }

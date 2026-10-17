@@ -9,10 +9,21 @@ import net.kyori.adventure.text.format.TextColor
 object TabName {
     private const val GAP = 2
 
-    fun format(name: String, role: PlayerRole?, bedrock: Boolean = false): Component {
+    fun format(
+        name: String,
+        role: PlayerRole?,
+        bedrock: Boolean = false,
+        bedrockViewer: Boolean = false,
+    ): Component {
         val colour = role?.colour?.let(TextColor::fromHexString) ?: Palette.TEXT
         val rank = role?.let(TabRankLabels::resolve)
         val row = Component.text()
+        if (bedrockViewer) {
+            rank?.let { row.append(BedrockRankBadges.chip(it, colour)).append(Component.space()) }
+            if (bedrock)
+                row.append(Component.text('\uE500', NamedTextColor.WHITE)).append(Component.space())
+            return row.append(Component.text(name, colour)).build()
+        }
         rank?.let { label ->
             row.append(TabBadge.chip(label, colour))
             row.append(Component.text(TabSpaces.of(GAP)).font(TabGlyphs.FONT))
