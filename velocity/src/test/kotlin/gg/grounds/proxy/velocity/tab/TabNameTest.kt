@@ -15,6 +15,21 @@ class TabNameTest {
         PlainTextComponentSerializer.plainText().serialize(TabName.format("Steve", role))
 
     @Test
+    fun `bedrock viewers receive native badge and edition glyphs without Java spacing`() {
+        val text =
+            PlainTextComponentSerializer.plainText()
+                .serialize(
+                    TabName.format(
+                        "Steve",
+                        PlayerRole("administrator", "Administrator", colour = "#C9826B"),
+                        bedrock = true,
+                        bedrockViewer = true,
+                    )
+                )
+        assertEquals("\uE600 \uE500 Steve", text)
+    }
+
+    @Test
     fun `rank sits in front of the name and no language chip is drawn`() {
         val text =
             plain(
