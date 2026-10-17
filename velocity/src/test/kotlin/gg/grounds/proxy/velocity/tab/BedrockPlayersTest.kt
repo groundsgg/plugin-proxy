@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 
 class BedrockPlayersTest {
     private val logger = LoggerFactory.getLogger(javaClass)
-    private val linked = UUID.fromString("12345678-1234-4234-8234-123456789abc")
+    private val ordinaryUuid = UUID.fromString("12345678-1234-4234-8234-123456789abc")
 
     object Api {
         @JvmStatic fun getInstance(): Api = this
@@ -16,23 +16,23 @@ class BedrockPlayersTest {
     }
 
     @Test
-    fun `Floodgate recognizes linked accounts with ordinary Java UUIDs`() {
-        assertTrue(BedrockPlayers(logger) { Api::class.java }.isBedrock(linked))
+    fun `Floodgate recognizes Bedrock profiles with an ordinary-shaped UUID`() {
+        assertTrue(BedrockPlayers(logger) { Api::class.java }.isBedrock(ordinaryUuid))
     }
 
     @Test
     fun `absent API can be discovered after plugin initialization`() {
         var api: Class<*>? = null
         val players = BedrockPlayers(logger) { api }
-        assertFalse(players.isBedrock(linked))
+        assertFalse(players.isBedrock(ordinaryUuid))
         api = Api::class.java
-        assertTrue(players.isBedrock(linked))
+        assertTrue(players.isBedrock(ordinaryUuid))
     }
 
     @Test
-    fun `missing or incompatible API degrades to unlinked UUID detection`() {
+    fun `missing or incompatible API never treats UUID shape as edition proof`() {
         val id = UUID.fromString("00000000-0000-0000-0009-01f64d9a38a8")
-        assertTrue(BedrockPlayers(logger) { null }.isBedrock(id))
-        assertFalse(BedrockPlayers(logger) { String::class.java }.isBedrock(linked))
+        assertFalse(BedrockPlayers(logger) { null }.isBedrock(id))
+        assertFalse(BedrockPlayers(logger) { String::class.java }.isBedrock(ordinaryUuid))
     }
 }

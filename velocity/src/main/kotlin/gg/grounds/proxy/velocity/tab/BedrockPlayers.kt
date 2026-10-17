@@ -21,14 +21,13 @@ internal class BedrockPlayers(private val logger: Logger, private val lookup: ()
                 logger.debug("Could not read a player's edition from Floodgate", failure)
             }
         }
-        return isUnlinkedUuid(id)
+        // UUID layout is not proof: Floodgate can also use a linked Java UUID, and a Java
+        // account can otherwise be mistaken for Bedrock by heuristics. Only Floodgate's API is
+        // authoritative for display classification.
+        return false
     }
 
     companion object {
-        // Floodgate represents an unlinked XUID in the UUID's lower 64 bits.
-        fun isUnlinkedUuid(id: UUID): Boolean =
-            id.mostSignificantBits == 0L && id.leastSignificantBits != 0L
-
         fun of(logger: Logger): BedrockPlayers =
             BedrockPlayers(logger) {
                 try {

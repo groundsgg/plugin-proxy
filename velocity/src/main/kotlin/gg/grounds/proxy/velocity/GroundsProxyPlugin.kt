@@ -14,8 +14,10 @@ import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
 import gg.grounds.presentation.VelocitySystemMessages
+import gg.grounds.proxy.api.PlayerDisplayQuery
 import gg.grounds.proxy.api.PlayerMessageRenderers
 import gg.grounds.proxy.api.PlayerRoleQuery
+import gg.grounds.proxy.api.PlayerSessionTransfer
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
 import gg.grounds.proxy.api.ServerDisplayQuery
@@ -33,9 +35,9 @@ import gg.grounds.proxy.velocity.motd.MotdGgClient
 import gg.grounds.proxy.velocity.motd.MotdManager
 import gg.grounds.proxy.velocity.tab.BedrockPlayers
 import gg.grounds.proxy.velocity.tab.BedrockRoster
+import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
 import io.nats.client.Subscription
-import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
@@ -227,11 +229,15 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 { payload -> platformSubject?.let { natsHandler.publish(it, payload) } },
             )
         bedrockRoster = roster
+        ProxyServiceRegistry.register(
+            PlayerDisplayQuery::class.java,
+            PlayerDisplayQueryImpl(proxy, roster),
+        )
         if (platformSubject != null) {
             crossProxySubscriptions += natsHandler.subscribe(platformSubject, roster::receive)
         } else {
             logger.warn(
-                "GROUNDS_ENVIRONMENT is unset or invalid; linked Bedrock indicators are local-only"
+                "GROUNDS_ENVIRONMENT is unset or invalid; Bedrock indicators are local-only"
             )
         }
         roster.refresh()
@@ -390,6 +396,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     fun onShutdown(event: ProxyShutdownEvent) {
         bedrockRoster?.close()
         ProxyServiceRegistry.unregister(ProxyService::class.java)
+        ProxyServiceRegistry.unregister(PlayerDisplayQuery::class.java)
         countSubscription?.let { natsHandler.unsubscribe(it) }
         crossProxySubscriptions.forEach { natsHandler.unsubscribe(it) }
         crossProxySubscriptions.clear()
@@ -508,7 +515,15 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                         )
                         return@forTarget
                     }
-                    player.transferToHost(InetSocketAddress.createUnresolved(host, port))
+                    if (
+                        ProxyServiceRegistry.get(PlayerSessionTransfer::class.java)
+                            ?.transferToHost(player.uniqueId, host, port) != true
+                    ) {
+                        logger.warn(
+                            "Host transfer could not issue a session handoff (player={})",
+                            player.uniqueId,
+                        )
+                    }
                 }
             }
 
