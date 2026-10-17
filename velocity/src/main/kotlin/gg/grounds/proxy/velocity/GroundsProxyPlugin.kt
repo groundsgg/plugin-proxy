@@ -21,6 +21,7 @@ import gg.grounds.proxy.api.ProxyServiceRegistry
 import gg.grounds.proxy.api.ServerDisplayQuery
 import gg.grounds.proxy.velocity.command.MotdCommand
 import gg.grounds.proxy.velocity.command.OnlineCommand
+import gg.grounds.proxy.velocity.command.ProxyDebugCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import gg.grounds.proxy.velocity.listener.LobbyCountsListener
@@ -244,8 +245,10 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 roleQuery = { ProxyServiceRegistry.get(PlayerRoleQuery::class.java) },
                 serverQuery = { ProxyServiceRegistry.get(ServerDisplayQuery::class.java) },
                 isBedrock = roster::isBedrock,
+                onlineCount = { networkPlayerCount },
             )
         tabList = tab
+        proxy.commandManager.register("proxydebug", ProxyDebugCommand(messages))
 
         // On a timer as well as on join: the ping and the roster both change with no event to hang
         // off, and a footer that shows the ping from the moment you logged in is worse than none.
