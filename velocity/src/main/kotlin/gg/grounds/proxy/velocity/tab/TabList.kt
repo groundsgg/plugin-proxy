@@ -9,35 +9,13 @@ import gg.grounds.proxy.api.ServerDisplayQuery
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 
-/**
- * The header and footer above and below the player list, and the chips and colour of the names in
- * it.
- *
- * The tab list is the only screen a player can open from anywhere, which makes it the right place
- * for the two facts that are true everywhere: which network this is, and which backend you are on.
- * It belongs to the proxy because both answers do — a backend server knows its own name and nothing
- * about how the network should label it.
- *
- * ```
- *              [GROUNDS wordmark]
- *
- *  [ADMIN]  Steve
- *  [USER]   Alex
- *
- *          Lobby 2 • 42 players online • 24 ms
- * ```
- *
- * The ping is coloured by how bad it is, using the state colours rather than a number nobody reads:
- * green under 100 ms, amber under 200, salmon above. A player who has not been measured yet gets a
- * dash instead of a fabricated zero.
- */
+/** Network branding, rank-coloured names, and rank/name ordering for each viewer's roster. */
 class TabList(
     private val proxy: ProxyServer,
     private val messages: Translations,
     private val roleQuery: () -> PlayerRoleQuery?,
     private val serverQuery: () -> ServerDisplayQuery?,
     private val isBedrock: (java.util.UUID) -> Boolean = { false },
-    private val onlineCount: () -> Int? = { null },
 ) {
     private val rankWarmup = RankWarmup()
 
@@ -47,13 +25,7 @@ class TabList(
         colourNames(viewer)
     }
 
-    /**
-     * Redraws for everyone.
-     *
-     * Called on a timer, because the ping and the roster change without an event to hang off. It
-     * renders per player rather than once for all of them: the footer is in the player's own
-     * language and carries their own ping, so there is nothing to share.
-     */
+    /** Refreshes each viewer in their language as the roster and rank snapshots change. */
     fun refreshAll() {
         proxy.allPlayers.forEach(::refresh)
     }
@@ -61,13 +33,7 @@ class TabList(
     private fun header(viewer: Player): Component = messages.render(ProxyMessage.TAB_HEADER, viewer)
 
     private fun footer(viewer: Player): Component =
-        messages.render(
-            ProxyMessage.TAB_FOOTER,
-            viewer,
-            "server" to serverLabel(viewer),
-            "ping" to ping(viewer.ping),
-            "online" to (onlineCount()?.toString() ?: "—"),
-        )
+        messages.render(ProxyMessage.TAB_FOOTER, viewer, "server" to serverLabel(viewer))
 
     private fun serverLabel(viewer: Player): Component {
         val raw =
@@ -78,12 +44,7 @@ class TabList(
         val label =
             kindLabel(kind, viewer)
                 ?: plain(messages.render(ProxyMessage.TAB_SERVER_UNKNOWN, viewer))
-        val peers =
-            proxy.allServers
-                .map { it.serverInfo.name }
-                .filter { query?.displayOf(it)?.kind == kind }
-        val number = ServerDisplayIds.numberOf(raw, peers)
-        return Component.text("$label $number", Palette.TEXT)
+        return Component.text(label, Palette.TEXT)
     }
 
     private fun kindLabel(kind: String?, viewer: Player): String? {
@@ -107,8 +68,25 @@ class TabList(
      */
     private fun colourNames(viewer: Player) {
         val query = roleQuery()
-        viewer.tabList.entries.forEach { entry ->
-            val role = query?.highestRoleOf(entry.profile.id)
+        val entries = viewer.tabList.entries.toList()
+        val roles = entries.associate { it.profile.id to query?.highestRoleOf(it.profile.id) }
+        val orders =
+            TabOrder.orders(
+                entries.map { entry ->
+                    TabOrder.Entry(
+                        entry.profile.id,
+                        gg.grounds.proxy.api.PlayerDisplayNames.displayName(
+                            entry.profile.name,
+                            isBedrock(entry.profile.id),
+                        ),
+                        roles[entry.profile.id]?.sortOrder,
+                    )
+                }
+            )
+        entries.forEach { entry ->
+            val order = orders.getValue(entry.profile.id)
+            if (entry.listOrder != order) entry.setListOrder(order)
+            val role = roles[entry.profile.id]
             val supplied = entry.displayNameComponent.orElse(null)
             if (
                 role == null &&

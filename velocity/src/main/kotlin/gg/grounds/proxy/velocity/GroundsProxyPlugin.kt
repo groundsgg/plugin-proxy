@@ -253,7 +253,6 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 roleQuery = { ProxyServiceRegistry.get(PlayerRoleQuery::class.java) },
                 serverQuery = { ProxyServiceRegistry.get(ServerDisplayQuery::class.java) },
                 isBedrock = roster::isBedrock,
-                onlineCount = { networkPlayerCount },
             )
         tabList = tab
         proxy.commandManager.register("proxydebug", ProxyDebugCommand(messages))
@@ -271,8 +270,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         proxy.eventManager.register(this, hops)
         proxy.commandManager.register("proxy", ProxyCommand(proxyId, service, hops, messages))
 
-        // On a timer as well as on join: the ping and the roster both change with no event to hang
-        // off, and a footer that shows the ping from the moment you logged in is worse than none.
+        // Roster entries and remote rank snapshots can change between join events.
         proxy.scheduler
             .buildTask(
                 this,
