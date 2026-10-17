@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.8.0](https://github.com/groundsgg/plugin-proxy/compare/v2.7.0...v2.8.0) (2026-10-17)
+
+
+### Features
+
+* **proxy:** display Bedrock identity and transfer profile sessions ([#91](https://github.com/groundsgg/plugin-proxy/issues/91)) ([341a555](https://github.com/groundsgg/plugin-proxy/commit/341a555fd83b15388644ee322e9a8f91e71592bc))
+
+
+### Bug Fixes
+
+* **badges:** add the moss-green MOD variant ([#87](https://github.com/groundsgg/plugin-proxy/issues/87)) ([ae2f64d](https://github.com/groundsgg/plugin-proxy/commit/ae2f64da0fc857278c82f3a2150fe2f0dc3c357f))
+* **docker:** preserve release versions in permission manifests ([#92](https://github.com/groundsgg/plugin-proxy/issues/92)) ([1ede31c](https://github.com/groundsgg/plugin-proxy/commit/1ede31c95b1c5cb766c198977b755ebc63307cb4))
+* **permissions:** index the proxy debug command permission ([#93](https://github.com/groundsgg/plugin-proxy/issues/93)) ([38fcf0f](https://github.com/groundsgg/plugin-proxy/commit/38fcf0f96f5c3453e17611c9ba46ee742923e7dc))
+* **tab:** retain initial ranks while remote queues drain ([#89](https://github.com/groundsgg/plugin-proxy/issues/89)) ([c9c1415](https://github.com/groundsgg/plugin-proxy/commit/c9c1415bb85f6749d58accde8ee71e172c47bd86))
+
 ## [2.7.0](https://github.com/groundsgg/plugin-proxy/compare/v2.6.1...v2.7.0) (2026-10-17)
 
 
