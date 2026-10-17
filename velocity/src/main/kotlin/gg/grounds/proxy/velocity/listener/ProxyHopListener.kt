@@ -135,7 +135,9 @@ class ProxyHopListener(
 
     private fun complete(player: Player, stage: Pending) {
         if (!pending.remove(player.uniqueId, stage) || !player.isActive) return
-        player.transferToHost(InetSocketAddress.createUnresolved(stage.target.host, stage.target.port))
+        player.transferToHost(
+            InetSocketAddress.createUnresolved(stage.target.host, stage.target.port)
+        )
     }
 
     private class Pending(val payload: ByteArray, val target: RegionCatalog.Region)
