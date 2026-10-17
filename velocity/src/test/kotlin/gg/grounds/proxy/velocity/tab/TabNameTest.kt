@@ -63,6 +63,27 @@ class TabNameTest {
     }
 
     @Test
+    fun `bedrock display strips exactly one technical prefix before drawing the icon`() {
+        val text =
+            PlainTextComponentSerializer.plainText()
+                .serialize(TabName.format(".Steve", null, bedrock = true))
+        assertTrue(text.contains("${TabGlyphs.BEDROCK_ICON}${TabSpaces.of(2)}Steve"), text)
+
+        val dotted =
+            PlainTextComponentSerializer.plainText()
+                .serialize(TabName.format("..Steve", null, bedrock = true))
+        assertTrue(dotted.contains("${TabGlyphs.BEDROCK_ICON}${TabSpaces.of(2)}.Steve"), dotted)
+    }
+
+    @Test
+    fun `java display keeps a leading dot and has no edition badge`() {
+        val text =
+            PlainTextComponentSerializer.plainText().serialize(TabName.format(".Steve", null))
+        assertTrue(text.startsWith(".Steve"), text)
+        assertFalse(text.contains(TabGlyphs.BEDROCK_ICON))
+    }
+
+    @Test
     fun `bedrock icon is omitted for java players`() {
         val text = PlainTextComponentSerializer.plainText().serialize(TabName.format("Steve", null))
 

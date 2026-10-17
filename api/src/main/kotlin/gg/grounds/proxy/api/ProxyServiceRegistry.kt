@@ -10,6 +10,10 @@ import java.util.concurrent.ConcurrentHashMap
  *   network.
  * - **plugin-player** registers [PlayerSessionQuery] — the network-wide lookup [ProxyService] falls
  *   back to for anyone who is not on this proxy.
+ * - **plugin-player** registers [PlayerSessionTransfer] — cross-proxy moves use a single-use
+ *   session handoff before sending the Minecraft transfer packet.
+ * - **plugin-proxy** registers [PlayerDisplayQuery] — renderers use verified edition and display
+ *   names without changing UUID-based targets or technical profile names.
  *
  * Consumers (plugin-chat, plugin-social) only read:
  * ```

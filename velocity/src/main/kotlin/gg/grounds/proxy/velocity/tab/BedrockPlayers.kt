@@ -21,12 +21,12 @@ internal class BedrockPlayers(private val logger: Logger, private val lookup: ()
                 logger.debug("Could not read a player's edition from Floodgate", failure)
             }
         }
-        return isUnlinkedUuid(id)
+        return isBedrockUuid(id)
     }
 
     companion object {
-        // Floodgate represents an unlinked XUID in the UUID's lower 64 bits.
-        fun isUnlinkedUuid(id: UUID): Boolean =
+        // Floodgate's standard XUID-derived Bedrock UUID has a zero high 64-bit half.
+        fun isBedrockUuid(id: UUID): Boolean =
             id.mostSignificantBits == 0L && id.leastSignificantBits != 0L
 
         fun of(logger: Logger): BedrockPlayers =
