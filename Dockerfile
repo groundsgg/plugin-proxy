@@ -20,6 +20,10 @@ ARG GITHUB_USER
 
 # Copy gradle wrapper + root config first so dependency caches stay warm
 # across source-only changes.
+COPY .release-please-manifest.json ./
+RUN version="$(sed -n 's/.*"\.": *"\([^"]*\)".*/\1/p' .release-please-manifest.json)" && \
+    test -n "$version" && \
+    printf 'versionOverride=%s\n' "$version" > /tmp/grounds-release-version.properties
 COPY gradle/ gradle/
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 
@@ -38,13 +42,21 @@ RUN --mount=type=secret,id=github_token,required=true \
     /bin/sh -euc '\
       : "${GITHUB_USER:?GITHUB_USER build arg is required}"; \
       token="$(cat /run/secrets/github_token)"; \
+      version="$(cut -d= -f2 /tmp/grounds-release-version.properties)"; \
       ./gradlew --no-daemon :velocity:build \
+        -PversionOverride="${version}" \
         -Pgithub.user="${GITHUB_USER}" \
         -Pgithub.token="${token}" \
     '
 
 RUN mkdir -p /out && \
     cp "$(ls -S /src/velocity/build/libs/*.jar | head -n1)" /out/plugin.jar
+
+# Fail the image build if shaded metadata loses the producing release version.
+RUN mkdir -p /tmp/manifest-check && cd /tmp/manifest-check && \
+    jar xf /out/plugin.jar META-INF/grounds/permissions/plugin-proxy.json && \
+    version="$(cut -d= -f2 /tmp/grounds-release-version.properties)" && \
+    grep -F "\"sourceVersion\": \"${version}\"" META-INF/grounds/permissions/plugin-proxy.json
 
 FROM alpine:3
 RUN mkdir -p /jar
