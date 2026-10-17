@@ -1,0 +1,14 @@
+{
+  "source": "plugin-proxy",
+  "permissions": [
+    {
+      "key": "grounds.motd.manage",
+      "label": "Manage the MOTD",
+      "description": "View and change the proxy message of the day.",
+      "supportedScopes": [
+        "GLOBAL"
+      ]
+    }
+  ],
+  "sourceVersion": "${version}"
+}
