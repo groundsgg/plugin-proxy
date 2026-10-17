@@ -10,6 +10,14 @@
       ]
     },
     {
+      "key": "grounds.proxy.switch",
+      "label": "Switch proxy",
+      "description": "Allows listing proxies and moving to a specific one with /proxy.",
+      "supportedScopes": [
+        "GLOBAL"
+      ]
+    },
+    {
       "key": "grounds.motd.manage",
       "label": "Manage proxy MOTD",
       "description": "Allows managing the network server-list MOTD with /motd.",
