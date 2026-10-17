@@ -34,6 +34,7 @@ COPY velocity/ velocity/
 # fails configuration on an included project with no directory, and the failure
 # names the module rather than the missing COPY.
 RUN --mount=type=secret,id=github_token,required=true \
+    --mount=type=secret,id=gradle_init,target=/root/.gradle/init.d/grounds-maven-mirror.init.gradle.kts,required=false \
     /bin/sh -euc '\
       : "${GITHUB_USER:?GITHUB_USER build arg is required}"; \
       token="$(cat /run/secrets/github_token)"; \
