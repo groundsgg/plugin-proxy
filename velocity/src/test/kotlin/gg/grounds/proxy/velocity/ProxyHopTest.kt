@@ -32,6 +32,14 @@ class ProxyHopTest {
     }
 
     @Test
+    fun `only pods of the same deployment are reachable through its address`() {
+        assertTrue(ProxyHop.sameDeployment(self, "velocity-7d9f8c6b5-abcde"))
+        assertTrue(ProxyHop.sameDeployment(self, "velocity-5c4b3a291-zzzzz"))
+        assertFalse(ProxyHop.sameDeployment(self, "velocity-bedrock-6f5e4d3c2-qqqqq"))
+        assertTrue(ProxyHop.sameDeployment("", "velocity-bedrock-6f5e4d3c2-qqqqq"))
+    }
+
+    @Test
     fun `landing on the target keeps the player, even with no hops left`() {
         val payload = ProxyHop.encode(ProxyHop.Ticket("x7k2q", 0))
         assertEquals(ProxyHop.Decision.Arrived("x7k2q"), ProxyHop.decide(payload, self))

@@ -21,6 +21,19 @@ class BedrockRosterTest {
     }
 
     @Test
+    fun `an empty proxy is still listed until its snapshot expires`() {
+        var now = 0L
+        var payload = ""
+        val source = BedrockRoster("velocity-a", { emptyList() }, { false }, { payload = it })
+        val viewer = BedrockRoster("velocity-b", { emptyList() }, { false }, {}, { now })
+        source.refresh()
+        viewer.receive(payload)
+        assertEquals(setOf("velocity-a"), viewer.remoteProxies())
+        now = BedrockRoster.EXPIRY_MILLIS
+        assertTrue(viewer.remoteProxies().isEmpty())
+    }
+
+    @Test
     fun `replacement snapshot removes disconnected players`() {
         var players = listOf(linked)
         var payload = ""
