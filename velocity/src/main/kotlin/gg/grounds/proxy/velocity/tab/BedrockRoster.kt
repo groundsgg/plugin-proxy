@@ -51,6 +51,15 @@ internal class BedrockRoster(
         return null
     }
 
+    /**
+     * The other proxies that sent a snapshot within [EXPIRY_MILLIS] — empty ones included, since
+     * every proxy publishes on its timer whether or not anyone is on it.
+     */
+    fun remoteProxies(): Set<String> {
+        val now = nowMillis()
+        return remote.filterValues { now - it.receivedAt < EXPIRY_MILLIS }.keys
+    }
+
     fun receive(raw: String) {
         if (raw.length > MAX_PAYLOAD) return
         val parsed =

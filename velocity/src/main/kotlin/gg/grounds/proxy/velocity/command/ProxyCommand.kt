@@ -18,13 +18,16 @@ import gg.grounds.proxy.velocity.listener.ProxyHopListener
  * [ProxyHopListener]: there is no address for a single proxy, so it can take a few reconnects.
  *
  * Any id is accepted, not only listed ones: the list comes from the session table, which does not
- * know a proxy nobody is on, and an empty proxy is often the one a test wants.
+ * know a proxy nobody is on, and an empty proxy is often the one a test wants. Tab completion also
+ * offers [liveProxies], which does know the empty ones.
  */
 class ProxyCommand(
     private val proxyId: String,
     private val proxyService: () -> ProxyService?,
     private val hops: ProxyHopListener,
     private val messages: Translations,
+    /** Proxies heard from recently, whether or not anyone is on them. */
+    private val liveProxies: () -> Collection<String> = { emptyList() },
 ) : SimpleCommand {
     private val suggestions = SuggestionCache()
 
@@ -82,11 +85,18 @@ class ProxyCommand(
 
     override fun suggest(invocation: SimpleCommand.Invocation): List<String> {
         val typed = invocation.arguments().firstOrNull()?.lowercase() ?: ""
-        val known =
+        val withPlayers =
             suggestions.get("") {
                 proxyService()?.getNetworkProxyCounts()?.proxies?.map { it.proxyId }.orEmpty()
             }
-        return known.filter { it != proxyId && it.lowercase().startsWith(typed) }
+        return (liveProxies() + withPlayers)
+            .distinct()
+            .filter {
+                it != proxyId &&
+                    ProxyHop.sameDeployment(it, proxyId) &&
+                    it.lowercase().startsWith(typed)
+            }
+            .sorted()
     }
 
     companion object {

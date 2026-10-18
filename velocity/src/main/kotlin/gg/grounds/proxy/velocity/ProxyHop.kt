@@ -43,6 +43,19 @@ object ProxyHop {
     fun matches(proxyId: String, target: String): Boolean =
         proxyId.equals(target, true) || proxyId.endsWith("-$target", true)
 
+    /**
+     * Whether [a] and [b] are pods of the same Deployment (`<deployment>-<hash>-<suffix>`). Only
+     * those sit behind the address a hop goes through; a Bedrock proxy, say, never answers it.
+     */
+    fun sameDeployment(a: String, b: String): Boolean {
+        val first = deploymentOf(a) ?: return true
+        val second = deploymentOf(b) ?: return true
+        return first.equals(second, true)
+    }
+
+    private fun deploymentOf(proxyId: String): String? =
+        proxyId.split('-').takeIf { it.size > 2 }?.dropLast(2)?.joinToString("-")
+
     fun decide(payload: ByteArray?, proxyId: String): Decision {
         val ticket = decode(payload) ?: return Decision.None
         return when {

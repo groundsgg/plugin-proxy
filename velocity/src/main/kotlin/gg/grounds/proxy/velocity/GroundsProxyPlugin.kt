@@ -268,7 +268,10 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 logger,
             )
         proxy.eventManager.register(this, hops)
-        proxy.commandManager.register("proxy", ProxyCommand(proxyId, service, hops, messages))
+        proxy.commandManager.register(
+            "proxy",
+            ProxyCommand(proxyId, service, hops, messages, roster::remoteProxies),
+        )
 
         // Roster entries and remote rank snapshots can change between join events.
         proxy.scheduler
