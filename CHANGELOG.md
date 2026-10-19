@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.9.0](https://github.com/groundsgg/plugin-proxy/compare/v2.8.0...v2.9.0) (2026-10-19)
+
+
+### Features
+
+* **proxy:** /proxy &lt;id&gt; to move to a specific proxy ([#90](https://github.com/groundsgg/plugin-proxy/issues/90)) ([79c3120](https://github.com/groundsgg/plugin-proxy/commit/79c3120c9c5be31159380a22a29a172b93b43b46))
+* **proxy:** serve network server counts from the player-count broadcast ([#99](https://github.com/groundsgg/plugin-proxy/issues/99)) ([815d841](https://github.com/groundsgg/plugin-proxy/commit/815d841244438f47b17145ed316b7126f21b3b7c))
+* **proxy:** tab-complete empty proxies in /proxy ([#97](https://github.com/groundsgg/plugin-proxy/issues/97)) ([bc58481](https://github.com/groundsgg/plugin-proxy/commit/bc58481bea5a79343710094f5c6f2552dfefbf1b))
+* **tab:** sort by rank and name with a two-line footer ([#95](https://github.com/groundsgg/plugin-proxy/issues/95)) ([74e2e88](https://github.com/groundsgg/plugin-proxy/commit/74e2e885f045995c5a7dfe94e7bc1c4fa3e8934e))
+
+
+### Bug Fixes
+
+* **badges:** distinguish MOD from DEV with muted petrol ([#96](https://github.com/groundsgg/plugin-proxy/issues/96)) ([2b7bfe9](https://github.com/groundsgg/plugin-proxy/commit/2b7bfe9b73efe6ae4771814d776626143af75a9b))
+* **tab:** add breathing room below the footer domain ([#98](https://github.com/groundsgg/plugin-proxy/issues/98)) ([955036b](https://github.com/groundsgg/plugin-proxy/commit/955036ba832bbeca80d34843bd323527a7fcd5da))
+
 ## [2.8.0](https://github.com/groundsgg/plugin-proxy/compare/v2.7.0...v2.8.0) (2026-10-17)
 
 
