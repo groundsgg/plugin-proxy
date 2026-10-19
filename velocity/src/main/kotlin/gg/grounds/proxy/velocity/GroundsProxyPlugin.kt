@@ -1,5 +1,6 @@
 package gg.grounds.proxy.velocity
 
+import com.google.gson.JsonParser
 import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.PostLoginEvent
@@ -14,6 +15,7 @@ import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
 import gg.grounds.presentation.VelocitySystemMessages
+import gg.grounds.proxy.api.NetworkPlayerCounts
 import gg.grounds.proxy.api.PlayerDisplayQuery
 import gg.grounds.proxy.api.PlayerMessageRenderers
 import gg.grounds.proxy.api.PlayerRoleQuery
@@ -88,6 +90,42 @@ internal fun parsePlayerCount(payload: String): Int? {
 }
 
 /**
+ * Reads the optional `"servers":{"<server>":n,..}` of a player-count broadcast.
+ *
+ * Null when the broadcast has none (an older service-player, or one with per-server counts off) or
+ * when it is not well formed — the caller then keeps asking the network, as before. A server whose
+ * count is not a non-negative integer makes the whole object unusable rather than silently absent.
+ */
+internal fun parseServerCounts(payload: String): Map<String, Int>? {
+    val root = runCatching { JsonParser.parseString(payload) }.getOrNull() ?: return null
+    if (!root.isJsonObject) return null
+    val servers = root.asJsonObject.get("servers") ?: return null
+    if (!servers.isJsonObject) return null
+    val counts = LinkedHashMap<String, Int>()
+    for ((server, value) in servers.asJsonObject.entrySet()) {
+        val count =
+            value
+                .takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }
+                ?.asString
+                ?.toIntOrNull()
+                ?.takeIf { it >= 0 } ?: return null
+        counts[server] = count
+    }
+    return counts
+}
+
+/** A broadcast's per-server counts while it is fresh; null when stale or when it carried none. */
+internal fun broadcastServerCounts(
+    total: Int,
+    servers: Map<String, Int>?,
+    receivedAtNanos: Long,
+    nowNanos: Long,
+): NetworkPlayerCounts? =
+    servers
+        ?.takeIf { isPlayerCountFresh(receivedAtNanos, nowNanos) }
+        ?.let { NetworkPlayerCounts(it, total) }
+
+/**
  * How long a cached player count is trusted before it is treated as absent.
  *
  * Six missed broadcasts (service-player publishes every 5s): long enough that ordinary network
@@ -126,8 +164,15 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private lateinit var natsHandler: NatsHandler
     private val crossProxySubscriptions = mutableListOf<Subscription>()
 
-    /** The last network-wide player count service-player published, and when it arrived. */
-    private data class CachedPlayerCount(val total: Int, val receivedAtNanos: Long)
+    /**
+     * The last network-wide player count service-player published, and when it arrived. [servers]
+     * is null when that broadcast carried no per-server counts.
+     */
+    private data class CachedPlayerCount(
+        val total: Int,
+        val receivedAtNanos: Long,
+        val servers: Map<String, Int>? = null,
+    )
 
     @Volatile private var cachedPlayerCount: CachedPlayerCount? = null
 
@@ -143,6 +188,13 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             cachedPlayerCount
                 ?.takeIf { isPlayerCountFresh(it.receivedAtNanos, System.nanoTime()) }
                 ?.total
+
+    /** The per-server counts of a fresh broadcast that carried them, as [NetworkPlayerCounts]. */
+    private val broadcastServerCounts: NetworkPlayerCounts?
+        get() =
+            cachedPlayerCount?.let {
+                broadcastServerCounts(it.total, it.servers, it.receivedAtNanos, System.nanoTime())
+            }
 
     private var countSubscription: Subscription? = null
     private var metrics: ProxyMetrics? = null
@@ -163,7 +215,14 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         natsHandler = NatsHandler(natsUrl, logger)
         natsHandler.connect()
 
-        val proxyServiceImpl = ProxyServiceImpl(natsHandler, proxy)
+        val countsFromNats = env("PROXY_COUNTS_FROM_NATS").toBoolean()
+        val proxyServiceImpl =
+            ProxyServiceImpl(
+                natsHandler,
+                proxy,
+                broadcastCounts = { broadcastServerCounts },
+                countsFromNats = countsFromNats,
+            )
         ProxyServiceRegistry.register(ProxyService::class.java, proxyServiceImpl)
 
         val catalog = RegionCatalog.fromEnvironment()
@@ -213,7 +272,8 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 if (parsed == null) {
                     logger.warn("Ignoring malformed player-count broadcast: {}", payload)
                 } else {
-                    cachedPlayerCount = CachedPlayerCount(parsed, System.nanoTime())
+                    cachedPlayerCount =
+                        CachedPlayerCount(parsed, System.nanoTime(), parseServerCounts(payload))
                 }
             }
 
@@ -288,7 +348,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
         startMetrics()
 
-        logger.info("plugin-proxy enabled (nats={})", natsUrl)
+        logger.info("plugin-proxy enabled (nats={}, countsFromNats={})", natsUrl, countsFromNats)
     }
 
     /**

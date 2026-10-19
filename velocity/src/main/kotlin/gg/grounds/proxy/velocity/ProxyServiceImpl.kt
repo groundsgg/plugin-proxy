@@ -14,10 +14,27 @@ import java.util.UUID
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 
+/**
+ * [ProxyService.getNetworkPlayerCounts]: the broadcast's counts when [countsFromNats] and a fresh
+ * one carries them, else the network query. Null only when neither can answer.
+ */
+internal fun networkPlayerCounts(
+    countsFromNats: Boolean,
+    broadcast: () -> NetworkPlayerCounts?,
+    query: () -> NetworkPlayerCounts?,
+): NetworkPlayerCounts? = (if (countsFromNats) broadcast() else null) ?: query()
+
 class ProxyServiceImpl(
     private val natsHandler: NatsHandler,
     private val proxy: ProxyServer,
     private val suggestionCache: SuggestionCache = SuggestionCache(),
+    /**
+     * The per-server counts from the latest `proxy.player-counts` broadcast, or null when there is
+     * no fresh one that carries them.
+     */
+    private val broadcastCounts: () -> NetworkPlayerCounts? = { null },
+    /** `PROXY_COUNTS_FROM_NATS`: answer [getNetworkPlayerCounts] from [broadcastCounts]. */
+    private val countsFromNats: Boolean = false,
 ) : ProxyService {
 
     private fun sessionQuery(): PlayerSessionQuery? =
@@ -79,8 +96,16 @@ class ProxyServiceImpl(
         )
     }
 
+    /**
+     * With [countsFromNats], served from memory: the broadcast arrives every few seconds, while a
+     * lobby asks for these on the Velocity event thread on every spawn. Without a fresh broadcast
+     * that carries per-server counts (an older service-player, a quiet subscription) the network is
+     * asked, as without the flag.
+     */
     override fun getNetworkPlayerCounts(): NetworkPlayerCounts? =
-        sessionQuery()?.countPlayersByServer()
+        networkPlayerCounts(countsFromNats, broadcastCounts) {
+            sessionQuery()?.countPlayersByServer()
+        }
 
     override fun sendToPlayer(targetId: UUID, message: Component) {
         val local = proxy.getPlayer(targetId).orElse(null)
