@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/groundsgg/plugin-proxy/compare/v2.9.0...v2.10.0) (2026-10-19)
+
+
+### Features
+
+* **proxy:** enforce shared scheduled network maintenance ([#100](https://github.com/groundsgg/plugin-proxy/issues/100)) ([ffb606f](https://github.com/groundsgg/plugin-proxy/commit/ffb606f5d4806d4b7b92218a562d6ac032ac5be6))
+
 ## [2.9.0](https://github.com/groundsgg/plugin-proxy/compare/v2.8.0...v2.9.0) (2026-10-19)
 
 
