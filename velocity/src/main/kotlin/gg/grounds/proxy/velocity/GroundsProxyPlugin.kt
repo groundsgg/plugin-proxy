@@ -2,7 +2,10 @@ package gg.grounds.proxy.velocity
 
 import com.google.gson.JsonParser
 import com.google.inject.Inject
+import com.velocitypowered.api.event.PostOrder
+import com.velocitypowered.api.event.ResultedEvent
 import com.velocitypowered.api.event.Subscribe
+import com.velocitypowered.api.event.connection.LoginEvent
 import com.velocitypowered.api.event.connection.PostLoginEvent
 import com.velocitypowered.api.event.player.ServerPostConnectEvent
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
@@ -12,6 +15,7 @@ import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
+import com.velocitypowered.api.scheduler.ScheduledTask
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
 import gg.grounds.presentation.VelocitySystemMessages
@@ -31,6 +35,9 @@ import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import gg.grounds.proxy.velocity.listener.LobbyCountsListener
 import gg.grounds.proxy.velocity.listener.ProxyHopListener
+import gg.grounds.proxy.velocity.maintenance.MaintenanceAccess
+import gg.grounds.proxy.velocity.maintenance.MaintenanceConfigStore
+import gg.grounds.proxy.velocity.maintenance.MaintenanceEngine
 import gg.grounds.proxy.velocity.metrics.MetricsConfig
 import gg.grounds.proxy.velocity.metrics.ProxyMetrics
 import gg.grounds.proxy.velocity.metrics.ProxySnapshot
@@ -44,6 +51,8 @@ import gg.grounds.proxy.velocity.tab.TabList
 import io.nats.client.Subscription
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import org.slf4j.Logger
 
@@ -207,6 +216,12 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
      */
     @Volatile private var motdManager: MotdManager? = null
     private var motdStore: MotdConfigStore? = null
+    @Volatile private var maintenanceStore: MaintenanceConfigStore? = null
+    private val maintenance = MaintenanceEngine()
+    private val maintenanceRefreshRunning = AtomicBoolean()
+    private val maintenanceClosed = AtomicBoolean()
+    private var maintenanceRefreshTask: ScheduledTask? = null
+    private var maintenanceApplyTask: ScheduledTask? = null
 
     @Subscribe
     fun onInitialize(event: ProxyInitializeEvent) {
@@ -278,6 +293,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             }
 
         startMotd()
+        startMaintenance()
 
         subscribeForProxy()
 
@@ -417,6 +433,78 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         )
     }
 
+    /** Starts the shared maintenance reader. Every proxy polls and only acts on its own players. */
+    private fun startMaintenance() {
+        val target = resolveConfigServiceTarget() ?: return
+        val app = env("CONFIG_APP") ?: DEFAULT_CONFIG_APP
+        val configEnv = env("CONFIG_ENV") ?: env("GROUNDS_PERMISSION_ENVIRONMENT") ?: return
+        maintenanceStore = MaintenanceConfigStore.open(app, configEnv, target)
+        // Hints shorten propagation after Portal saves; polling remains the correctness fallback.
+        crossProxySubscriptions +=
+            natsHandler.subscribe("config.$app.$configEnv.changed") {
+                if (!maintenanceClosed.get()) {
+                    proxy.scheduler
+                        .buildTask(this, Runnable { refreshMaintenanceConfiguration() })
+                        .schedule()
+                }
+            }
+        maintenanceRefreshTask =
+            proxy.scheduler
+                .buildTask(this, Runnable { refreshMaintenanceConfiguration() })
+                .repeat(5, TimeUnit.SECONDS)
+                .schedule()
+        // The local schedule still advances while Config is unavailable: end times and countdowns
+        // are decisions from the cached signed document, not from a successful request this tick.
+        maintenanceApplyTask =
+            proxy.scheduler
+                .buildTask(this, Runnable { applyMaintenance() })
+                .repeat(1, TimeUnit.SECONDS)
+                .schedule()
+    }
+
+    private fun refreshMaintenanceConfiguration() {
+        if (maintenanceClosed.get()) return
+        val store = maintenanceStore ?: return
+        if (!maintenanceRefreshRunning.compareAndSet(false, true)) return
+        try {
+            val document = store.read()
+            if (!maintenanceClosed.get()) maintenance.adopt(document)
+        } catch (failure: Exception) {
+            maintenance.refreshFailed()
+            logger.warn(
+                "Maintenance refresh failed (reason={}); retaining last valid state",
+                failure.message,
+            )
+        } finally {
+            maintenanceRefreshRunning.set(false)
+        }
+    }
+
+    private fun applyMaintenance() {
+        if (maintenanceClosed.get()) return
+        val now = java.time.Instant.now()
+        maintenance.announcementsAt(now).forEach {
+            maintenance.announcementMessage(now)?.let { message ->
+                val component = MiniMessage.miniMessage().deserialize(message)
+                proxy.allPlayers.forEach { player -> player.sendMessage(component) }
+            }
+        }
+        proxy.allPlayers.forEach { player ->
+            if (
+                MaintenanceAccess.shouldKick(
+                    maintenance,
+                    player.uniqueId,
+                    { player.hasPermission(MaintenanceAccess.BYPASS_PERMISSION) },
+                    now,
+                )
+            ) {
+                player.disconnect(
+                    MiniMessage.miniMessage().deserialize(maintenance.denialMessage(now))
+                )
+            }
+        }
+    }
+
     private fun env(name: String): String? = System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }
 
     /**
@@ -438,7 +526,8 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     fun onProxyPing(event: ProxyPingEvent) {
         val count = networkPlayerCount
         val motd = motdManager
-        if (count == null && motd == null) return
+        val maintenanceMotd = maintenanceStore?.let { maintenance.motd() }
+        if (count == null && motd == null && maintenanceMotd == null) return
 
         val builder = event.ping.asBuilder()
         count?.let { builder.onlinePlayers(it) }
@@ -450,7 +539,28 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 builder.description(it)
             }
         }
+        maintenanceMotd?.let { builder.description(MiniMessage.miniMessage().deserialize(it)) }
         event.ping = builder.build()
+    }
+
+    @Subscribe(order = PostOrder.LAST)
+    fun onLogin(event: LoginEvent) {
+        if (!event.result.isAllowed) return
+        if (maintenanceStore == null) return
+        val player = event.player
+        val admission =
+            MaintenanceAccess.admission(
+                maintenance,
+                player.uniqueId,
+                { player.hasPermission(MaintenanceAccess.BYPASS_PERMISSION) },
+                java.time.Instant.now(),
+            )
+        if (!admission.allowed) {
+            event.result =
+                ResultedEvent.ComponentResult.denied(
+                    MiniMessage.miniMessage().deserialize(admission.message!!)
+                )
+        }
     }
 
     @Subscribe
@@ -477,6 +587,11 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         crossProxySubscriptions.forEach { natsHandler.unsubscribe(it) }
         crossProxySubscriptions.clear()
         motdStore?.close()
+        maintenanceClosed.set(true)
+        maintenanceRefreshTask?.cancel()
+        maintenanceApplyTask?.cancel()
+        maintenanceStore?.close()
+        maintenanceStore = null
         metrics?.let { runCatching { it.close() } }
         metrics = null
         if (this::natsHandler.isInitialized) {

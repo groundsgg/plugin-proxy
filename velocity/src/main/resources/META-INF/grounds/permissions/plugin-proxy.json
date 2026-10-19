@@ -2,6 +2,14 @@
   "source": "plugin-proxy",
   "permissions": [
     {
+      "key": "grounds.maintenance.bypass",
+      "label": "Bypass network maintenance",
+      "description": "Allows joining and remaining connected during network maintenance.",
+      "supportedScopes": [
+        "GLOBAL"
+      ]
+    },
+    {
       "key": "grounds.proxy.debug",
       "label": "Proxy diagnostics",
       "description": "Allows viewing technical backend and proxy identifiers with /proxydebug.",
