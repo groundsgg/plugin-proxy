@@ -91,14 +91,12 @@ class MaintenanceEngine(private val clock: Clock = Clock.systemUTC()) {
     }
 
     @Synchronized
+    fun protocolName(now: Instant = clock.instant()): String? =
+        if (activeAt(now)) "§cWartungsarbeiten" else null
+
+    @Synchronized
     fun motd(now: Instant = clock.instant()): String? =
-        document
-            ?.takeIf {
-                it.enabled &&
-                    !now.isBefore(it.startsAt) &&
-                    (it.endsAt == null || now.isBefore(it.endsAt))
-            }
-            ?.let { render(it.motd, now) }
+        document?.takeIf { activeAt(now) && it.motd.isNotBlank() }?.let { render(it.motd, now) }
 
     @Synchronized
     fun announcementMessage(now: Instant = clock.instant()): String? =

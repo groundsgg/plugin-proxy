@@ -146,7 +146,7 @@ internal constructor(
                 }
             val motd =
                 string("motd").also {
-                    if (it.isEmpty() || it.length > 4096)
+                    if (it.length > 4096)
                         throw MaintenanceStoreException("Maintenance motd is invalid")
                 }
             val announcement =

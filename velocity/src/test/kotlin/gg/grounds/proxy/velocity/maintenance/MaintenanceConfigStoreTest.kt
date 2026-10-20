@@ -16,6 +16,15 @@ import org.junit.jupiter.api.assertThrows
 
 class MaintenanceConfigStoreTest {
     @Test
+    fun `an empty maintenance motd preserves the normal server description`() {
+        val valid = json("123e4567-e89b-12d3-a456-426614174000")
+        assertEquals(
+            "",
+            MaintenanceConfigStore.parse(valid.replace("\"motd\":\"motd\"", "\"motd\":\"\"")).motd,
+        )
+    }
+
+    @Test
     fun `accepts canonical UUIDs of every version including floodgate UUIDs`() {
         val document = MaintenanceConfigStore.parse(json("123e4567-e89b-12d3-a456-426614174000"))
         assertEquals("123e4567-e89b-12d3-a456-426614174000", document.id.toString())

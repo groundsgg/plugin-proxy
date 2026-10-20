@@ -15,6 +15,7 @@ import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
+import com.velocitypowered.api.proxy.server.ServerPing
 import com.velocitypowered.api.scheduler.ScheduledTask
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
@@ -50,6 +51,7 @@ import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
 import io.nats.client.Subscription
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import net.kyori.adventure.text.minimessage.MiniMessage
@@ -526,8 +528,10 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     fun onProxyPing(event: ProxyPingEvent) {
         val count = networkPlayerCount
         val motd = motdManager
-        val maintenanceMotd = maintenanceStore?.let { maintenance.motd() }
-        if (count == null && motd == null && maintenanceMotd == null) return
+        val now = Instant.now()
+        val maintenanceMotd = maintenanceStore?.let { maintenance.motd(now) }
+        val maintenanceProtocol = maintenanceStore?.let { maintenance.protocolName(now) }
+        if (count == null && motd == null && maintenanceProtocol == null) return
 
         val builder = event.ping.asBuilder()
         count?.let { builder.onlinePlayers(it) }
@@ -540,6 +544,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             }
         }
         maintenanceMotd?.let { builder.description(MiniMessage.miniMessage().deserialize(it)) }
+        maintenanceProtocol?.let { builder.version(ServerPing.Version(-1, it)) }
         event.ping = builder.build()
     }
 

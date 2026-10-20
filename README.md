@@ -198,6 +198,16 @@ than a gap.
 
 The NATS auth-callout scopes each pod to the subjects declared in its bundle `events:` block, so `proxy.system.*` and `proxy.transfer.*` must be listed there — an undeclared subject is denied and the message vanishes.
 
+## Maintenance in the server list
+
+During an active maintenance window, every proxy reports a red `Wartungsarbeiten`
+label in the server list's protocol/version field. Once the window ends or is
+disabled, the normal version and player-count display returns on the next ping.
+
+The maintenance document's `motd` is optional in effect: set it to an empty string
+to keep the normal MOTD. A nonblank value overrides the description only while
+maintenance is active. New maintenance drafts default to an empty override.
+
 ## Build
 
 ```bash

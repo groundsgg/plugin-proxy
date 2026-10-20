@@ -12,6 +12,34 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class MaintenanceEngineTest {
+    @Test
+    fun `maintenance protocol label follows the window on every proxy without overriding the motd`() {
+        val start = Instant.parse("2026-10-20T20:00:00Z")
+        val document = active(start, endsAt = start.plusSeconds(60)).copy(motd = "")
+        val proxies = listOf(MaintenanceEngine(), MaintenanceEngine())
+        proxies.forEach { engine ->
+            engine.adopt(document, start.minusSeconds(1))
+            assertEquals(null, engine.protocolName(start.minusSeconds(1)))
+            assertEquals("§cWartungsarbeiten", engine.protocolName(start))
+            assertEquals(null, engine.motd(start))
+            assertEquals(null, engine.protocolName(start.plusSeconds(60)))
+            engine.adopt(document.copy(enabled = false), start)
+            assertEquals(null, engine.protocolName(start))
+        }
+    }
+
+    @Test
+    fun `an optional maintenance motd is rendered only during the active window`() {
+        val start = Instant.parse("2026-10-20T20:00:00Z")
+        val engine = MaintenanceEngine()
+        engine.adopt(active(start, endsAt = start.plusSeconds(60)), start)
+        assertEquals(null, engine.motd(start.minusSeconds(1)))
+        assertEquals("motd", engine.motd(start))
+        assertEquals(null, engine.motd(start.plusSeconds(60)))
+        engine.adopt(active(start).copy(motd = "   "), start)
+        assertEquals(null, engine.motd(start))
+    }
+
     private val id = UUID.fromString("00000000-0000-0000-0000-000000000001")
     private val player = UUID.fromString("00000000-0000-0000-0000-000000000002")
 
