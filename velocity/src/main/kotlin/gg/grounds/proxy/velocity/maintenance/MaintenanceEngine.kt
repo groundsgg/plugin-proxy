@@ -91,6 +91,10 @@ class MaintenanceEngine(private val clock: Clock = Clock.systemUTC()) {
     }
 
     @Synchronized
+    fun serverListDocument(now: Instant = clock.instant()): MaintenanceDocument? =
+        document?.takeIf { activeAt(now) }
+
+    @Synchronized
     fun protocolName(now: Instant = clock.instant()): String? =
         if (activeAt(now)) "§cWartungsarbeiten" else null
 
@@ -158,4 +162,7 @@ data class MaintenanceDocument(
     val whitelist: Set<UUID>,
     val announcementSeconds: List<Long>,
     val announcementMessage: String,
+    val serverList: gg.grounds.proxy.velocity.motd.ServerListTemplate? = null,
+    val serverListFallbackText: String? = null,
+    val serverListOverrides: Set<String>? = null,
 )

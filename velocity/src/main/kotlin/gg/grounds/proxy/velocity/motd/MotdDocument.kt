@@ -25,7 +25,12 @@ data class MotdDocument(
     val source: String? = null,
     val updatedBy: String? = null,
     val updatedAt: String? = null,
+    val serverList: ServerListTemplate? = null,
+    val editor: JsonObject? = null,
+    val serverListFallbackText: String? = null,
 ) {
+
+    val compiledFallback = CompiledServerText.fromMiniMessage(text)
 
     fun toJson(): String {
         val json = JsonObject()
@@ -34,6 +39,9 @@ data class MotdDocument(
         source?.let { json.addProperty("source", it) }
         updatedBy?.let { json.addProperty("updatedBy", it) }
         updatedAt?.let { json.addProperty("updatedAt", it) }
+        serverList?.let { json.add("serverList", it.json.deepCopy()) }
+        editor?.let { json.add("editor", it.deepCopy()) }
+        serverListFallbackText?.let { json.addProperty("serverListFallbackText", it) }
         return json.toString()
     }
 
@@ -62,6 +70,9 @@ data class MotdDocument(
                     ?: throw MotdFormatException("stored MOTD has no 'text'")
             return MotdDocument(
                 text = text,
+                serverList = json.getAsJsonObject("serverList")?.let(ServerListTemplate::parse),
+                editor = json.getAsJsonObject("editor")?.deepCopy(),
+                serverListFallbackText = json.get("serverListFallbackText")?.asString,
                 maxPlayers = json.get("maxPlayers")?.takeIf { it.isJsonPrimitive }?.asInt,
                 source = json.get("source")?.takeIf { it.isJsonPrimitive }?.asString,
                 updatedBy = json.get("updatedBy")?.takeIf { it.isJsonPrimitive }?.asString,

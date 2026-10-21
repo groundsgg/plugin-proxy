@@ -15,7 +15,6 @@ import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
-import com.velocitypowered.api.proxy.server.ServerPing
 import com.velocitypowered.api.scheduler.ScheduledTask
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
@@ -524,29 +523,17 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
      * the player-facing network, where that plugin is not installed, and where a project name would
      * be the wrong thing to show anyway.
      */
-    @Subscribe
-    fun onProxyPing(event: ProxyPingEvent) {
-        val count = networkPlayerCount
-        val motd = motdManager
-        val now = Instant.now()
-        val maintenanceMotd = maintenanceStore?.let { maintenance.motd(now) }
-        val maintenanceProtocol = maintenanceStore?.let { maintenance.protocolName(now) }
-        if (count == null && motd == null && maintenanceProtocol == null) return
-
-        val builder = event.ping.asBuilder()
-        count?.let { builder.onlinePlayers(it) }
-        motd?.let { manager ->
-            manager.maxPlayers()?.let { builder.maximumPlayers(it) }
-            // The numbers this very ping is about to report, so a MOTD that mentions them cannot
-            // disagree with the pair printed next to it.
-            manager.render(builder.onlinePlayers, builder.maximumPlayers)?.let {
-                builder.description(it)
-            }
-        }
-        maintenanceMotd?.let { builder.description(MiniMessage.miniMessage().deserialize(it)) }
-        maintenanceProtocol?.let { builder.version(ServerPing.Version(-1, it)) }
-        event.ping = builder.build()
+    private val serverListPingListener by lazy {
+        gg.grounds.proxy.velocity.motd.ServerListPingListener(
+            manager = { motdManager },
+            networkPlayers = { networkPlayerCount },
+            maintenance = { if (maintenanceStore != null) maintenance else null },
+            region = { RegionCatalog.currentCode() },
+            continent = { env("CONTINENT") },
+        )
     }
+
+    @Subscribe fun onProxyPing(event: ProxyPingEvent) = serverListPingListener.onProxyPing(event)
 
     @Subscribe(order = PostOrder.LAST)
     fun onLogin(event: LoginEvent) {
