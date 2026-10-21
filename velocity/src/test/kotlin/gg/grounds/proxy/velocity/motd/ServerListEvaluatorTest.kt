@@ -48,6 +48,42 @@ class ServerListEvaluatorTest {
     }
 
     @Test
+    fun `aligns MOTD to the actual modern client content width`() {
+        val template =
+            ServerListTemplate.parse(
+                JsonParser.parseString(
+                        """{"schemaVersion":1,"motd":{"text":{"nodes":[{"type":"text","value":"A"}]},"alignments":["right"]},"version":{"mode":"automatic"},"icon":null,"players":{"hidden":false,"online":{"mode":"inherit"},"maximum":{"mode":"inherit"}},"hover":{"mode":"inherit"}}"""
+                    )
+                    .asJsonObject
+            )
+        val base =
+            ServerPing.builder()
+                .version(ServerPing.Version(777, "26.3"))
+                .description(Component.empty())
+                .onlinePlayers(8)
+                .maximumPlayers(100)
+                .build()
+        for ((protocol, spaces) in listOf(767 to 66, 774 to 65, 775 to 65, 776 to 65, 777 to 65)) {
+            val result =
+                ServerListEvaluator.evaluate(
+                    base,
+                    template,
+                    8,
+                    protocol,
+                    "A",
+                    "eu",
+                    "Europe",
+                    compiledMotd = template.motd,
+                )
+            assertEquals(
+                " ".repeat(spaces) + "A",
+                PlainTextComponentSerializer.plainText().serialize(result.descriptionComponent!!),
+                "protocol $protocol",
+            )
+        }
+    }
+
+    @Test
     fun `agrees with independently generated JavaScript status fixtures`() {
         val fixtures =
             JsonParser.parseReader(

@@ -36,7 +36,10 @@ object ServerListEvaluator {
                     "continent" to continent.orEmpty(),
                     "localzone" to continent.orEmpty(),
                 )
-        if (compiledMotd != null) builder.description(compiledMotd.render(values))
+        if (compiledMotd != null)
+            builder.description(
+                compiledMotd.render(values, if (clientProtocol in 774..777) 267 else 271)
+            )
         else if (compiledFallback != null) builder.description(compiledFallback.render(values))
         else
             fallbackText?.let {

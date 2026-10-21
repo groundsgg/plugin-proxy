@@ -34,7 +34,7 @@ internal fun componentLines(component: Component): List<Component> {
 class CompiledMotd(document: JsonObject, private val alignments: List<String>) {
     private val text = CompiledServerText(document)
 
-    fun render(values: Map<String, String>): Component {
+    fun render(values: Map<String, String>, lineWidth: Int = 271): Component {
         val rendered = text.render(values)
         if (alignments.all { it == "left" }) return rendered
         var result: Component = Component.empty()
@@ -58,7 +58,7 @@ class CompiledMotd(document: JsonObject, private val alignments: List<String>) {
                 node.children().forEach { measure(it, style) }
             }
             measure(line, Style.empty())
-            val remaining = (271 - width).coerceAtLeast(0)
+            val remaining = (lineWidth - width).coerceAtLeast(0)
             val alignment = alignments.getOrNull(index) ?: "left"
             val spaces =
                 when (alignment) {

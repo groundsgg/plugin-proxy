@@ -445,6 +445,54 @@
       }
     }
   ],
+  "modernClientAlignment": [
+    {
+      "version": {
+        "protocol": 777,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                                                                 ",
+          {
+            "extra": [
+              "A"
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    },
+    {
+      "version": {
+        "protocol": 777,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                                                                 ",
+          {
+            "extra": [
+              "A"
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    }
+  ],
   "addresses": [
     "127.0.0.1:25611",
     "127.0.0.1:25612"
