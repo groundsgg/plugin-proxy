@@ -19,9 +19,10 @@ class ServerListPingListener(
 ) {
     @Subscribe
     fun onProxyPing(event: ProxyPingEvent) {
+        val sampledNow = now()
         val normal = manager()?.current()
         val engine = maintenance()
-        val active = engine?.serverListDocument(now())
+        val active = engine?.serverListDocument(sampledNow)
         val base = event.ping.asBuilder()
         normal?.maxPlayers?.let(base::maximumPlayers)
         var template = normal?.serverList
@@ -32,7 +33,7 @@ class ServerListPingListener(
             normal?.serverList?.motd?.takeIf { normal.serverListFallbackText == normal.text }
         if (active != null) {
             if (active.motd.isNotBlank()) {
-                fallback = engine.motd(now())
+                fallback = engine.motd(sampledNow)
                 compiled = null
                 compiledMotd =
                     override?.motd?.takeIf { active.serverListFallbackText == active.motd }
@@ -88,14 +89,13 @@ class ServerListPingListener(
                 continent(),
                 compiled,
                 compiledMotd,
-                if (active != null) engine!!.serverListValues(now()) else emptyMap(),
+                if (active != null) engine.serverListValues(sampledNow) else emptyMap(),
             )
         // Preserve the legacy maintenance marker only for documents without a status template.
-        if (active != null && override == null)
-            event.ping =
-                event.ping
-                    .asBuilder()
-                    .version(ServerPing.Version(-1, engine.protocolName(now())!!))
-                    .build()
+        if (active != null && override == null) {
+            engine.protocolName(sampledNow)?.let {
+                event.ping = event.ping.asBuilder().version(ServerPing.Version(-1, it)).build()
+            }
+        }
     }
 }

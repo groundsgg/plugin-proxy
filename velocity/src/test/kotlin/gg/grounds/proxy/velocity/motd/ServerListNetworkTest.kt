@@ -64,6 +64,68 @@ class ServerListNetworkTest {
         return event.ping
     }
 
+    private fun legacyMaintenance(start: Instant, end: Instant) =
+        MaintenanceDocument(
+            enabled = true,
+            id = UUID.randomUUID(),
+            startsAt = start,
+            endsAt = end,
+            estimatedEndAt = null,
+            reason = "Work",
+            joinMessage = "Closed",
+            motd = "",
+            kickExisting = false,
+            whitelist = emptySet(),
+            announcementSeconds = emptyList(),
+            announcementMessage = "Soon",
+        )
+
+    @Test
+    fun `one ping uses one instant when maintenance ends during evaluation`() {
+        val start = Instant.parse("2026-10-21T12:00:00Z")
+        val end = start.plusSeconds(60)
+        val engine = MaintenanceEngine()
+        engine.adopt(legacyMaintenance(start, end), start)
+        var reads = 0
+        val listener =
+            ServerListPingListener(
+                { null },
+                { null },
+                { engine },
+                { null },
+                { null },
+                { if (reads++ == 0) end.minusNanos(1) else end },
+            )
+
+        val result = ping(listener, 3)
+
+        assertEquals(-1, result.version.protocol)
+        assertEquals(1, reads)
+    }
+
+    @Test
+    fun `maintenance refresh during one ping cannot crash legacy status evaluation`() {
+        val now = Instant.parse("2026-10-21T12:00:00Z")
+        val engine = MaintenanceEngine()
+        engine.adopt(legacyMaintenance(now.minusSeconds(60), now.plusSeconds(60)), now)
+        val listener =
+            ServerListPingListener(
+                { null },
+                {
+                    engine.adopt(null, now)
+                    null
+                },
+                { engine },
+                { null },
+                { null },
+                { now },
+            )
+
+        val result = ping(listener, 3)
+
+        assertEquals(767, result.version.protocol)
+    }
+
     @Test
     fun `two independent proxy stores serve shared counts retain cache and restore normal after maintenance`() {
         val a = Store()
