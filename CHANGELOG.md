@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.11.0](https://github.com/groundsgg/plugin-proxy/compare/v2.10.0...v2.11.0) (2026-10-21)
+
+
+### Features
+
+* **proxy:** support standalone server-list templates ([#104](https://github.com/groundsgg/plugin-proxy/issues/104)) ([0b9481f](https://github.com/groundsgg/plugin-proxy/commit/0b9481f9ddb65d3daa9049eb5bd871fea3fa8c72))
+
+
+### Bug Fixes
+
+* **proxy:** show maintenance in protocol and make MOTD optional ([#102](https://github.com/groundsgg/plugin-proxy/issues/102)) ([2e96dad](https://github.com/groundsgg/plugin-proxy/commit/2e96dad0d62f7a128aeeaab2c233fab8359b2501))
+
 ## [2.10.0](https://github.com/groundsgg/plugin-proxy/compare/v2.9.0...v2.10.0) (2026-10-19)
 
 
