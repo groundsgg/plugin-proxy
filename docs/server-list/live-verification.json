@@ -1,0 +1,508 @@
+{
+  "initial": [
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 500,
+        "sample": [
+          {
+            "name": "\u00a768 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "gold",
+        "text": "eu 8/500"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    },
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 500,
+        "sample": [
+          {
+            "name": "\u00a768 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "gold",
+        "text": "na 8/500"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    }
+  ],
+  "updated": [
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed eu 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    },
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed na 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    }
+  ],
+  "maintenance": [
+    {
+      "version": {
+        "protocol": -1,
+        "name": "\u00a7cMaintenance"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed eu 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    },
+    {
+      "version": {
+        "protocol": -1,
+        "name": "\u00a7cMaintenance"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed na 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    }
+  ],
+  "ended": [
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed eu 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    },
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed na 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    }
+  ],
+  "failedRefresh": [
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed eu 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    },
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed na 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    }
+  ],
+  "invalidIcon": [
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed eu 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    },
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 10,
+        "max": 20,
+        "sample": [
+          {
+            "name": "\u00a7610 players",
+            "id": "00000000-0000-0000-0000-000000000000"
+          },
+          {
+            "name": "\u00a7aWelcome",
+            "id": "00000000-0000-0000-0000-000000000000"
+          }
+        ]
+      },
+      "description": {
+        "color": "green",
+        "text": "Changed na 10/20"
+      },
+      "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
+    }
+  ],
+  "resolvedAlignment": [
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                           ",
+          {
+            "extra": [
+              {
+                "color": "gold",
+                "text": "e"
+              },
+              {
+                "color": "gold",
+                "text": "u"
+              },
+              {
+                "color": "gold",
+                "text": ":"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "8"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "/"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "1"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              }
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    },
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                           ",
+          {
+            "extra": [
+              {
+                "color": "gold",
+                "text": "n"
+              },
+              {
+                "color": "gold",
+                "text": "a"
+              },
+              {
+                "color": "gold",
+                "text": ":"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "8"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "/"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "1"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              }
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    }
+  ],
+  "modernClientAlignment": [
+    {
+      "version": {
+        "protocol": 777,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                                                                 ",
+          {
+            "extra": [
+              "A"
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    },
+    {
+      "version": {
+        "protocol": 777,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                                                                 ",
+          {
+            "extra": [
+              "A"
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    }
+  ],
+  "addresses": [
+    "127.0.0.1:25611",
+    "127.0.0.1:25612"
+  ],
+  "localCounts": [
+    3,
+    5
+  ],
+  "networkCount": 8,
+  "runtime": "Velocity 4.2.0",
+  "sharedConfig": "/tmp/grounds-motd-proxies/shared.json",
+  "iconSha256": "be19b61f591a7776d20e1792a2682b1a27f2768fda4bc0d4b7b3fa1cbb2ff7e9"
+}

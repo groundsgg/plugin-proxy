@@ -69,7 +69,15 @@ class MotdManager(
      *   command instead of leaving them believing it took.
      */
     fun set(document: MotdDocument, actor: String) {
-        val stamped = document.copy(updatedBy = actor, updatedAt = Instant.now().toString())
+        val changedText =
+            document.editor?.get("fallbackText")?.asString?.let { it != document.text } == true
+        val stamped =
+            document.copy(
+                updatedBy = actor,
+                updatedAt = Instant.now().toString(),
+                editor = if (changedText) null else document.editor,
+                serverListFallbackText = if (changedText) null else document.serverListFallbackText,
+            )
         store.write(stamped, actor)
         adopt(stamped)
         loaded = true

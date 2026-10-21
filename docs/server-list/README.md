@@ -1,0 +1,2 @@
+
+Native client follow-up: the supplied 1.21.11 and 26.1–26.3 profiles have 301 logical pixels of content inside the 305-pixel selection outline, so MOTD alignment uses 267 pixels for protocols 774–777. Other protocol IDs retain the existing 271-pixel width until separately mapped. `modernClientAlignment` in live-verification.json proves right-alignment over actual protocol-777 status requests on both proxies, alongside the older protocol-767 case.

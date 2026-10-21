@@ -204,6 +204,11 @@ internal constructor(
                 uuids.toSet(),
                 seconds,
                 announcement,
+                root
+                    .getAsJsonObject("serverList")
+                    ?.let(gg.grounds.proxy.velocity.motd.ServerListTemplate::parse),
+                root.get("serverListFallbackText")?.asString,
+                root.getAsJsonArray("serverListOverrides")?.map { it.asString }?.toSet(),
             )
         }
 
