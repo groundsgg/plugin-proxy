@@ -32,6 +32,27 @@ data class MotdDocument(
 
     val compiledFallback = CompiledServerText.fromMiniMessage(text)
 
+    fun withMaximum(value: Int?): MotdDocument {
+        val template =
+            serverList
+                ?: return copy(maxPlayers = value, editor = null, serverListFallbackText = null)
+        val json = template.json.deepCopy()
+        val rule = JsonObject()
+        rule.addProperty("mode", if (value == null) "inherit" else "fixed")
+        value?.let { rule.addProperty("value", it) }
+        json.getAsJsonObject("players").add("maximum", rule)
+        val metadata = editor?.deepCopy()
+        metadata
+            ?.getAsJsonObject("document")
+            ?.getAsJsonObject("players")
+            ?.add("maximum", rule.deepCopy())
+        return copy(
+            maxPlayers = value,
+            serverList = ServerListTemplate.parse(json),
+            editor = metadata,
+        )
+    }
+
     fun toJson(): String {
         val json = JsonObject()
         json.addProperty("text", text)

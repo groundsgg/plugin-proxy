@@ -91,6 +91,20 @@ class MaintenanceEngine(private val clock: Clock = Clock.systemUTC()) {
     }
 
     @Synchronized
+    fun serverListValues(now: Instant = clock.instant()): Map<String, String> =
+        mapOf(
+            "reason" to document?.reason.orEmpty(),
+            "end" to
+                (document?.endsAt ?: document?.estimatedEndAt)?.toString().orEmpty().ifEmpty {
+                    "to be announced"
+                },
+            "remaining" to
+                formatRemaining(
+                    (document?.startsAt?.epochSecond ?: now.epochSecond) - now.epochSecond
+                ),
+        )
+
+    @Synchronized
     fun serverListDocument(now: Instant = clock.instant()): MaintenanceDocument? =
         document?.takeIf { activeAt(now) }
 

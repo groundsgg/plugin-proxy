@@ -186,7 +186,7 @@ class MotdCommand(
                             return
                         }
             }
-        store(source, document.copy(maxPlayers = value)) {
+        store(source, document.withMaximum(value)) {
             messages.send(
                 source,
                 if (value == null) ProxySystemMessage.MOTD_MAX_PLAYERS_CLEARED

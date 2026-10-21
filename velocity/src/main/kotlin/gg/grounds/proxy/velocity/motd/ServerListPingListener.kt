@@ -28,10 +28,14 @@ class ServerListPingListener(
         val override = active?.serverList
         var fallback = normal?.text
         var compiled = normal?.compiledFallback
+        var compiledMotd =
+            normal?.serverList?.motd?.takeIf { normal.serverListFallbackText == normal.text }
         if (active != null) {
             if (active.motd.isNotBlank()) {
                 fallback = engine.motd(now())
                 compiled = null
+                compiledMotd =
+                    override?.motd?.takeIf { active.serverListFallbackText == active.motd }
             }
             if (override != null) {
                 val fields =
@@ -83,6 +87,8 @@ class ServerListPingListener(
                 region(),
                 continent(),
                 compiled,
+                compiledMotd,
+                if (active != null) engine!!.serverListValues(now()) else emptyMap(),
             )
         // Preserve the legacy maintenance marker only for documents without a status template.
         if (active != null && override == null)

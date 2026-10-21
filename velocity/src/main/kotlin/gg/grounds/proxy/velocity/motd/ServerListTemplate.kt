@@ -20,6 +20,7 @@ data class ServerListTemplate(
     val maximum: ServerCountRule,
     val hoverMode: String,
     val hoverText: CompiledServerText?,
+    val motd: CompiledMotd,
 ) {
     companion object {
         fun parse(json: JsonObject): ServerListTemplate {
@@ -66,6 +67,10 @@ data class ServerListTemplate(
                 hoverMode,
                 if (hoverMode == "custom") CompiledServerText(hover.getAsJsonObject("text"))
                 else null,
+                CompiledMotd(
+                    json.getAsJsonObject("motd").getAsJsonObject("text"),
+                    json.getAsJsonObject("motd").getAsJsonArray("alignments").map { it.asString },
+                ),
             )
         }
     }
@@ -103,20 +108,29 @@ data class ServerCountRule(val mode: String, val value: Double = 0.0) {
 class CompiledServerText private constructor(private val source: String) {
     constructor(document: JsonObject) : this(compile(document))
 
-    private val static = if (source.contains("{{")) null else MM.deserialize(source)
+    private val static = if (PLACEHOLDER.containsMatchIn(source)) null else MM.deserialize(source)
 
     fun render(values: Map<String, String>): Component =
         static
             ?: MM.deserialize(
-                Regex("\\{\\{([A-Za-z0-9_]+)}}").replace(source) { match ->
-                    values[match.groupValues[1]]?.let(MM::escapeTags) ?: match.value
+                PLACEHOLDER.replace(source) { match ->
+                    values[match.groupValues[1].ifEmpty { match.groupValues[2] }]?.let(
+                        MM::escapeTags
+                    ) ?: match.value
                 }
             )
 
     fun legacy(values: Map<String, String>): String =
         LegacyComponentSerializer.legacySection().serialize(render(values))
 
+    fun legacyLines(values: Map<String, String>): List<String> =
+        componentLines(render(values)).map {
+            LegacyComponentSerializer.legacySection().serialize(it)
+        }
+
     companion object {
+        private val PLACEHOLDER = Regex("\\{\\{([A-Za-z0-9_]+)}}|\\{(reason|end|remaining)}")
+
         fun fromMiniMessage(source: String) = CompiledServerText(source)
 
         private val MM = MiniMessage.miniMessage()
@@ -244,7 +258,13 @@ class CompiledServerText private constructor(private val source: String) {
                                                 acc.append(
                                                     Component.text(char)
                                                         .style(
-                                                            if (oldStyle.color() == null)
+                                                            if (
+                                                                oldStyle.color() == null ||
+                                                                    oldStyle
+                                                                        .color()
+                                                                        ?.asHexString() ==
+                                                                        style.get("color")?.asString
+                                                            )
                                                                 oldStyle.color(color)
                                                             else oldStyle
                                                         )

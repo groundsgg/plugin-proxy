@@ -81,6 +81,7 @@ class ServerListEvaluatorTest {
                     f.get("source").asString,
                     "eu",
                     "Europe",
+                    compiledMotd = template.motd,
                 )
             assertEquals(
                 expected.getAsJsonObject("version").get("protocol").asInt,
@@ -107,5 +108,59 @@ class ServerListEvaluatorTest {
                 PlainTextComponentSerializer.plainText().serialize(actual.descriptionComponent!!),
             )
         }
+    }
+
+    @Test
+    fun `sample lines carry inherited colors independently`() {
+        val text =
+            CompiledServerText(
+                com.google.gson.JsonParser.parseString(
+                        """{"nodes":[{"type":"group","style":{"color":"#ff5555"},"children":[{"type":"text","value":"first"},{"type":"newline"},{"type":"text","value":"second"}]}]}"""
+                    )
+                    .asJsonObject
+            )
+        assertTrue(text.legacyLines(emptyMap())[1].contains("§c"))
+    }
+
+    @Test
+    fun `runtime alignment resolves placeholders before measuring text`() {
+        val json =
+            JsonParser.parseReader(
+                    javaClass.getResourceAsStream("/server-list/contract.json")!!.reader()
+                )
+                .asJsonArray[0]
+                .asJsonObject
+                .getAsJsonObject("template")
+                .deepCopy()
+        json
+            .getAsJsonObject("motd")
+            .add("alignments", JsonParser.parseString("""["center","left"]"""))
+        val template = ServerListTemplate.parse(json)
+        val rendered =
+            PlainTextComponentSerializer.plainText()
+                .serialize(
+                    template.motd.render(mapOf("region" to "eu", "players" to "8", "max" to "100"))
+                )
+        assertFalse(rendered.contains("{{"))
+        assertTrue(rendered.startsWith(" "))
+        assertEquals("eu: 8 / 100", rendered.trim())
+    }
+
+    @Test
+    fun `legacy maximum commands update runtime and editor rules`() {
+        val root =
+            JsonParser.parseReader(
+                    javaClass.getResourceAsStream("/server-list/contract.json")!!.reader()
+                )
+                .asJsonArray[0]
+                .asJsonObject
+        val template = root.getAsJsonObject("template").deepCopy()
+        template
+            .getAsJsonObject("players")
+            .add("maximum", JsonParser.parseString("""{"mode":"fixed","value":500}"""))
+        val original = MotdDocument("text", serverList = ServerListTemplate.parse(template))
+        val changed = original.withMaximum(200)
+        assertEquals(200, changed.serverList!!.maximum.apply(100, 8))
+        assertEquals("inherit", changed.withMaximum(null).serverList!!.maximum.mode)
     }
 }

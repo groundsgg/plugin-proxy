@@ -311,6 +311,140 @@
       "favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAiUlEQVR4Xu3QIQEAQBCEwC35/aPceyqAGINk93ZmY7BpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYf7DIyLAxCEbAAAAAASUVORK5CYII="
     }
   ],
+  "resolvedAlignment": [
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                           ",
+          {
+            "extra": [
+              {
+                "color": "gold",
+                "text": "e"
+              },
+              {
+                "color": "gold",
+                "text": "u"
+              },
+              {
+                "color": "gold",
+                "text": ":"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "8"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "/"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "1"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              }
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    },
+    {
+      "version": {
+        "protocol": 767,
+        "name": "Velocity 1.7.2-26.3"
+      },
+      "players": {
+        "online": 8,
+        "max": 100,
+        "sample": []
+      },
+      "description": {
+        "extra": [
+          "                           ",
+          {
+            "extra": [
+              {
+                "color": "gold",
+                "text": "n"
+              },
+              {
+                "color": "gold",
+                "text": "a"
+              },
+              {
+                "color": "gold",
+                "text": ":"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "8"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "/"
+              },
+              {
+                "color": "gold",
+                "text": " "
+              },
+              {
+                "color": "gold",
+                "text": "1"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              },
+              {
+                "color": "gold",
+                "text": "0"
+              }
+            ],
+            "text": ""
+          }
+        ],
+        "text": ""
+      }
+    }
+  ],
   "addresses": [
     "127.0.0.1:25611",
     "127.0.0.1:25612"

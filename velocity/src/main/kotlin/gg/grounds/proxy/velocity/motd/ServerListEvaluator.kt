@@ -15,6 +15,8 @@ object ServerListEvaluator {
         region: String?,
         continent: String?,
         compiledFallback: CompiledServerText? = null,
+        compiledMotd: CompiledMotd? = null,
+        runtimeValues: Map<String, String> = emptyMap(),
     ): ServerPing {
         val builder = base.asBuilder()
         networkPlayers?.let { builder.onlinePlayers(it) }
@@ -26,14 +28,16 @@ object ServerListEvaluator {
         val players = builder.onlinePlayers
         val max = builder.maximumPlayers
         val values =
-            mapOf(
-                "players" to players.toString(),
-                "max" to max.toString(),
-                "region" to region.orEmpty(),
-                "continent" to continent.orEmpty(),
-                "localzone" to continent.orEmpty(),
-            )
-        if (compiledFallback != null) builder.description(compiledFallback.render(values))
+            runtimeValues +
+                mapOf(
+                    "players" to players.toString(),
+                    "max" to max.toString(),
+                    "region" to region.orEmpty(),
+                    "continent" to continent.orEmpty(),
+                    "localzone" to continent.orEmpty(),
+                )
+        if (compiledMotd != null) builder.description(compiledMotd.render(values))
+        else if (compiledFallback != null) builder.description(compiledFallback.render(values))
         else
             fallbackText?.let {
                 builder.description(
@@ -62,7 +66,7 @@ object ServerListEvaluator {
                     builder
                         .clearSamplePlayers()
                         .samplePlayers(
-                            it.hoverText!!.legacy(values).split('\n').map { name ->
+                            it.hoverText!!.legacyLines(values).map { name ->
                                 ServerPing.SamplePlayer(name, UUID(0, 0))
                             }
                         )
