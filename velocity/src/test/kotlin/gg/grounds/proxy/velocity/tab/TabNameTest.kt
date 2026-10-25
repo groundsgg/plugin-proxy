@@ -132,7 +132,7 @@ class TabNameTest {
         val name = "Steve"
         val text =
             PlainTextComponentSerializer.plainText()
-                .serialize(TabName.format(name, null, voice = false))
+                .serialize(TabName.format(name, null, voice = TabVoice.OFF))
         assertTrue(text.startsWith(TabGlyphs.VOICE_OFF.toString()), text)
         assertTrue(
             text.endsWith(
@@ -148,10 +148,20 @@ class TabNameTest {
     }
 
     @Test
+    fun `a party member without voice gets the voice-off icon in the danger colour`() {
+        val icon =
+            findText(
+                TabName.format("Steve", null, voice = TabVoice.MISSING),
+                TabGlyphs.VOICE_OFF.toString(),
+            )
+        assertEquals(gg.grounds.i18n.Palette.DANGER, icon.color())
+    }
+
+    @Test
     fun `bedrock viewers get no voice icon`() {
         val text =
             PlainTextComponentSerializer.plainText()
-                .serialize(TabName.format("Steve", null, bedrockViewer = true, voice = true))
+                .serialize(TabName.format("Steve", null, bedrockViewer = true, voice = TabVoice.ON))
         assertEquals("Steve", text)
     }
 

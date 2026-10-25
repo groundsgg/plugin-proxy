@@ -8,6 +8,15 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
 import net.kyori.adventure.text.format.TextDecoration
 
+/** What the tab list shows about a player's voice; Java viewers only. */
+enum class TabVoice {
+    ON,
+    /** Switched off in the mod. */
+    OFF,
+    /** No voice at all, shown only to the player's own party: voice cannot reach them. */
+    MISSING,
+}
+
 object TabName {
     private const val GAP = 2
 
@@ -17,8 +26,8 @@ object TabName {
         bedrock: Boolean = false,
         bedrockViewer: Boolean = false,
         partyMember: Boolean = false,
-        /** True for voice on, false for voice off, null for no voice; Java viewers only. */
-        voice: Boolean? = null,
+        /** Null draws no voice icon. */
+        voice: TabVoice? = null,
     ): Component {
         val displayName = PlayerDisplayNames.displayName(name, bedrock)
         val colour = role?.colour?.let(TextColor::fromHexString) ?: Palette.TEXT
@@ -42,14 +51,14 @@ object TabName {
             )
             row.append(Component.text(TabSpaces.of(GAP)).font(TabGlyphs.FONT))
         }
-        voice?.let { on ->
-            row.append(
-                Component.text(
-                        if (on) TabGlyphs.VOICE_ON else TabGlyphs.VOICE_OFF,
-                        if (on) Palette.SUCCESS else Palette.TEXT_FAINT,
-                    )
-                    .font(TabGlyphs.FONT)
-            )
+        voice?.let {
+            val icon =
+                when (it) {
+                    TabVoice.ON -> Component.text(TabGlyphs.VOICE_ON, Palette.SUCCESS)
+                    TabVoice.OFF -> Component.text(TabGlyphs.VOICE_OFF, Palette.TEXT_FAINT)
+                    TabVoice.MISSING -> Component.text(TabGlyphs.VOICE_OFF, Palette.DANGER)
+                }
+            row.append(icon.font(TabGlyphs.FONT))
             row.append(Component.text(TabSpaces.of(GAP)).font(TabGlyphs.FONT))
         }
         row.append(nameText)
