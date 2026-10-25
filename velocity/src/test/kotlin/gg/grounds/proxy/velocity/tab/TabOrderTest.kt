@@ -27,4 +27,19 @@ class TabOrderTest {
         val order = TabOrder.orders(entries)
         assertEquals(listOf(entries[2].id, entries[0].id, entries[1].id), order.keys.toList())
     }
+
+    @Test
+    fun `the viewer's party comes before any rank`() {
+        val entries =
+            listOf(
+                TabOrder.Entry(UUID(0, 1), "Admin", 0),
+                TabOrder.Entry(UUID(0, 2), "zed", null, party = true),
+                TabOrder.Entry(UUID(0, 3), "amy", 50, party = true),
+            )
+        val order = TabOrder.orders(entries)
+        assertEquals(
+            listOf("amy", "zed", "Admin"),
+            entries.sortedByDescending { order[it.id] }.map { it.name },
+        )
+    }
 }

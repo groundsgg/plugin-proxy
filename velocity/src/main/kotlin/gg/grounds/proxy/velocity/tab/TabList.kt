@@ -9,13 +9,17 @@ import gg.grounds.proxy.api.ServerDisplayQuery
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 
-/** Network branding, rank-coloured names, and rank/name ordering for each viewer's roster. */
+/**
+ * Network branding, rank-coloured names, and party/rank/name ordering for each viewer's roster. The
+ * viewer's party members are drawn bold at the top.
+ */
 class TabList(
     private val proxy: ProxyServer,
     private val messages: Translations,
     private val roleQuery: () -> PlayerRoleQuery?,
     private val serverQuery: () -> ServerDisplayQuery?,
     private val isBedrock: (java.util.UUID) -> Boolean = { false },
+    private val partyOf: (java.util.UUID) -> java.util.UUID? = { null },
 ) {
     private val rankWarmup = RankWarmup()
 
@@ -70,6 +74,9 @@ class TabList(
         val query = roleQuery()
         val entries = viewer.tabList.entries.toList()
         val roles = entries.associate { it.profile.id to query?.highestRoleOf(it.profile.id) }
+        val party = partyOf(viewer.uniqueId)
+        val partyMembers =
+            entries.map { it.profile.id }.filter { party != null && partyOf(it) == party }.toSet()
         val orders =
             TabOrder.orders(
                 entries.map { entry ->
@@ -80,6 +87,7 @@ class TabList(
                             isBedrock(entry.profile.id),
                         ),
                         roles[entry.profile.id]?.sortOrder,
+                        party = entry.profile.id in partyMembers,
                     )
                 }
             )
@@ -106,6 +114,7 @@ class TabList(
                     role,
                     isBedrock(entry.profile.id),
                     bedrockViewer = isBedrock(viewer.uniqueId),
+                    partyMember = entry.profile.id in partyMembers,
                 )
             if (supplied != formatted) entry.setDisplayName(formatted)
         }

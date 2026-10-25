@@ -6,6 +6,7 @@ import gg.grounds.proxy.api.PlayerRole
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
+import net.kyori.adventure.text.format.TextDecoration
 
 object TabName {
     private const val GAP = 2
@@ -15,16 +16,19 @@ object TabName {
         role: PlayerRole?,
         bedrock: Boolean = false,
         bedrockViewer: Boolean = false,
+        partyMember: Boolean = false,
     ): Component {
         val displayName = PlayerDisplayNames.displayName(name, bedrock)
         val colour = role?.colour?.let(TextColor::fromHexString) ?: Palette.TEXT
         val rank = role?.let(TabRankLabels::resolve)
+        val nameText =
+            Component.text(displayName, colour).decoration(TextDecoration.BOLD, partyMember)
         val row = Component.text()
         if (bedrockViewer) {
             rank?.let { row.append(BedrockRankBadges.chip(it, colour)).append(Component.space()) }
             if (bedrock)
                 row.append(Component.text('\uE500', NamedTextColor.WHITE)).append(Component.space())
-            return row.append(Component.text(displayName, colour)).build()
+            return row.append(nameText).build()
         }
         rank?.let { label ->
             row.append(TabBadge.chip(label, colour))
@@ -36,16 +40,17 @@ object TabName {
             )
             row.append(Component.text(TabSpaces.of(GAP)).font(TabGlyphs.FONT))
         }
-        row.append(Component.text(displayName, colour))
-        val pad = TabGlyphs.HEADER_WIDTH - rowWidth(displayName, rank, bedrock)
+        row.append(nameText)
+        val pad = TabGlyphs.HEADER_WIDTH - rowWidth(displayName, rank, bedrock, partyMember)
         if (pad > 0) {
             row.append(Component.text(TabSpaces.of(pad)).font(TabGlyphs.FONT))
         }
         return row.build()
     }
 
-    private fun rowWidth(name: String, rank: String?, bedrock: Boolean): Int {
-        var width = VanillaAdvances.width(name)
+    private fun rowWidth(name: String, rank: String?, bedrock: Boolean, bold: Boolean): Int {
+        // Bold draws every glyph one pixel wider.
+        var width = VanillaAdvances.width(name) + if (bold) name.length else 0
         rank?.let { width += TabBadge.width(it) + GAP }
         if (bedrock) width += TabGlyphs.BEDROCK_ADVANCE + GAP
         return width
