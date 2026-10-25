@@ -51,7 +51,12 @@ import org.slf4j.Logger
  */
 class ProxyMetrics
 private constructor(
-    private val registry: PrometheusMeterRegistry,
+    /**
+     * The registry the endpoint serves, also published as the `MeterRegistry` proxy service so
+     * other proxy plugins put their meters on this one port (the satellite's agent scrapes one per
+     * pod).
+     */
+    val registry: MeterRegistry,
     private val http: HttpServer,
     private val closeables: List<AutoCloseable>,
     private val logger: Logger,

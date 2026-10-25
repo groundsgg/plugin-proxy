@@ -49,6 +49,7 @@ import gg.grounds.proxy.velocity.tab.BedrockRoster
 import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
 import gg.grounds.proxy.velocity.tab.TabParties
+import io.micrometer.core.instrument.MeterRegistry
 import io.nats.client.Subscription
 import java.time.Duration
 import java.time.Instant
@@ -613,6 +614,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         maintenanceApplyTask?.cancel()
         maintenanceStore?.close()
         maintenanceStore = null
+        ProxyServiceRegistry.unregister(MeterRegistry::class.java)
         metrics?.let { runCatching { it.close() } }
         metrics = null
         if (this::natsHandler.isInitialized) {
@@ -657,6 +659,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                     )
                 }
                 .getOrNull()
+        metrics?.let { ProxyServiceRegistry.register(MeterRegistry::class.java, it.registry) }
     }
 
     /**
