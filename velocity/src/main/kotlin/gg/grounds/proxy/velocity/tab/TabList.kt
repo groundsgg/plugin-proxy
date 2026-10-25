@@ -116,7 +116,13 @@ class TabList(
                     isBedrock(entry.profile.id),
                     bedrockViewer = isBedrock(viewer.uniqueId),
                     partyMember = entry.profile.id in partyMembers,
-                    voice = voiceOf(entry.profile.id),
+                    voice =
+                        when (voiceOf(entry.profile.id)) {
+                            true -> TabVoice.ON
+                            false -> TabVoice.OFF
+                            // The party should know voice cannot reach this member.
+                            null -> TabVoice.MISSING.takeIf { entry.profile.id in partyMembers }
+                        },
                 )
             if (supplied != formatted) entry.setDisplayName(formatted)
         }
