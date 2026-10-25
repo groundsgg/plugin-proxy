@@ -49,6 +49,7 @@ import gg.grounds.proxy.velocity.tab.BedrockRoster
 import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
 import gg.grounds.proxy.velocity.tab.TabParties
+import gg.grounds.proxy.velocity.tab.VoicePresences
 import io.micrometer.core.instrument.MeterRegistry
 import io.nats.client.Subscription
 import java.time.Duration
@@ -217,6 +218,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private var tabList: TabList? = null
     private var bedrockRoster: BedrockRoster? = null
     private val tabParties = TabParties()
+    private val voicePresences = VoicePresences()
     private var partySubject: String? = null
 
     /**
@@ -339,9 +341,14 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 serverQuery = { ProxyServiceRegistry.get(ServerDisplayQuery::class.java) },
                 isBedrock = roster::isBedrock,
                 partyOf = tabParties::partyOf,
+                voiceOf = voicePresences::voiceOf,
             )
         tabList = tab
         partySubject = TabParties.subject(System.getenv("GROUNDS_ENVIRONMENT"))
+        VoicePresences.subject(System.getenv("GROUNDS_ENVIRONMENT"))?.let { subject ->
+            crossProxySubscriptions +=
+                natsHandler.subscribe(subject) { if (voicePresences.receive(it)) tab.refreshAll() }
+        }
         partySubject?.let { subject ->
             crossProxySubscriptions +=
                 natsHandler.subscribe(subject) { if (tabParties.receive(it)) tab.refreshAll() }

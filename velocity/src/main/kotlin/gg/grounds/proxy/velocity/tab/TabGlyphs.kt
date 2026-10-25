@@ -11,6 +11,11 @@ object TabGlyphs {
     const val BADGE_RIGHT = '\uE003'
     const val BEDROCK_ICON = '\uE004'
     const val BEDROCK_ADVANCE = 9
+    /** resourcepacks `TabIcons`: white 7x7 glyphs in an 8px cell, tinted by the text colour. */
+    const val VOICE_ON = '\uE005'
+    const val VOICE_OFF = '\uE006'
+    const val PARTY = '\uE007'
+    const val ICON_ADVANCE = 8
     const val LEFT_PX = 3
     const val MIDDLE_PX = 1
     const val RIGHT_PX = 3
