@@ -20,6 +20,7 @@ class TabList(
     private val serverQuery: () -> ServerDisplayQuery?,
     private val isBedrock: (java.util.UUID) -> Boolean = { false },
     private val partyOf: (java.util.UUID) -> java.util.UUID? = { null },
+    private val voiceOf: (java.util.UUID) -> Boolean? = { null },
 ) {
     private val rankWarmup = RankWarmup()
 
@@ -115,6 +116,7 @@ class TabList(
                     isBedrock(entry.profile.id),
                     bedrockViewer = isBedrock(viewer.uniqueId),
                     partyMember = entry.profile.id in partyMembers,
+                    voice = voiceOf(entry.profile.id),
                 )
             if (supplied != formatted) entry.setDisplayName(formatted)
         }

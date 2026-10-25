@@ -128,6 +128,34 @@ class TabNameTest {
     }
 
     @Test
+    fun `the voice icon sits before the name and is counted in the padding`() {
+        val name = "Steve"
+        val text =
+            PlainTextComponentSerializer.plainText()
+                .serialize(TabName.format(name, null, voice = false))
+        assertTrue(text.startsWith(TabGlyphs.VOICE_OFF.toString()), text)
+        assertTrue(
+            text.endsWith(
+                TabSpaces.of(
+                    TabGlyphs.HEADER_WIDTH -
+                        VanillaAdvances.width(name) -
+                        TabGlyphs.ICON_ADVANCE -
+                        2
+                )
+            ),
+            text,
+        )
+    }
+
+    @Test
+    fun `bedrock viewers get no voice icon`() {
+        val text =
+            PlainTextComponentSerializer.plainText()
+                .serialize(TabName.format("Steve", null, bedrockViewer = true, voice = true))
+        assertEquals("Steve", text)
+    }
+
+    @Test
     fun `a name that is already wider than the wordmark is not padded`() {
         val name = "A".repeat(40)
         val text = PlainTextComponentSerializer.plainText().serialize(TabName.format(name, null))

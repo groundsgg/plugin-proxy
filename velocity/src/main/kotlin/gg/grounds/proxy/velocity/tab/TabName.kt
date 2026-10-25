@@ -17,6 +17,8 @@ object TabName {
         bedrock: Boolean = false,
         bedrockViewer: Boolean = false,
         partyMember: Boolean = false,
+        /** True for voice on, false for voice off, null for no voice; Java viewers only. */
+        voice: Boolean? = null,
     ): Component {
         val displayName = PlayerDisplayNames.displayName(name, bedrock)
         val colour = role?.colour?.let(TextColor::fromHexString) ?: Palette.TEXT
@@ -40,19 +42,38 @@ object TabName {
             )
             row.append(Component.text(TabSpaces.of(GAP)).font(TabGlyphs.FONT))
         }
+        voice?.let { on ->
+            row.append(
+                Component.text(
+                        if (on) TabGlyphs.VOICE_ON else TabGlyphs.VOICE_OFF,
+                        if (on) Palette.SUCCESS else Palette.TEXT_FAINT,
+                    )
+                    .font(TabGlyphs.FONT)
+            )
+            row.append(Component.text(TabSpaces.of(GAP)).font(TabGlyphs.FONT))
+        }
         row.append(nameText)
-        val pad = TabGlyphs.HEADER_WIDTH - rowWidth(displayName, rank, bedrock, partyMember)
+        val pad =
+            TabGlyphs.HEADER_WIDTH -
+                rowWidth(displayName, rank, bedrock, partyMember, voice != null)
         if (pad > 0) {
             row.append(Component.text(TabSpaces.of(pad)).font(TabGlyphs.FONT))
         }
         return row.build()
     }
 
-    private fun rowWidth(name: String, rank: String?, bedrock: Boolean, bold: Boolean): Int {
+    private fun rowWidth(
+        name: String,
+        rank: String?,
+        bedrock: Boolean,
+        bold: Boolean,
+        voice: Boolean,
+    ): Int {
         // Bold draws every glyph one pixel wider.
         var width = VanillaAdvances.width(name) + if (bold) name.length else 0
         rank?.let { width += TabBadge.width(it) + GAP }
         if (bedrock) width += TabGlyphs.BEDROCK_ADVANCE + GAP
+        if (voice) width += TabGlyphs.ICON_ADVANCE + GAP
         return width
     }
 }
