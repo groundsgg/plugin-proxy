@@ -111,6 +111,23 @@ class TabNameTest {
     }
 
     @Test
+    fun `a party member is bold and padded for the wider glyphs`() {
+        val name = "Steve"
+        val formatted = TabName.format(name, null, partyMember = true)
+        assertEquals(
+            TextDecoration.State.TRUE,
+            findText(formatted, name).style().decoration(TextDecoration.BOLD),
+        )
+        val text = PlainTextComponentSerializer.plainText().serialize(formatted)
+        assertTrue(
+            text.endsWith(
+                TabSpaces.of(TabGlyphs.HEADER_WIDTH - VanillaAdvances.width(name) - name.length)
+            ),
+            text,
+        )
+    }
+
+    @Test
     fun `a name that is already wider than the wordmark is not padded`() {
         val name = "A".repeat(40)
         val text = PlainTextComponentSerializer.plainText().serialize(TabName.format(name, null))

@@ -48,9 +48,11 @@ import gg.grounds.proxy.velocity.tab.BedrockPlayers
 import gg.grounds.proxy.velocity.tab.BedrockRoster
 import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
+import gg.grounds.proxy.velocity.tab.TabParties
 import io.nats.client.Subscription
 import java.time.Duration
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import net.kyori.adventure.text.minimessage.MiniMessage
@@ -71,6 +73,9 @@ private const val PLAYER_COUNTS_SUBJECT = "proxy.player-counts"
  * bad shows up while the player is still wondering why.
  */
 private const val TAB_REFRESH_SECONDS = 5L
+
+/** service-social answers from one query; past this the tab simply stays without the party. */
+private val PARTY_LOOKUP_TIMEOUT: Duration = Duration.ofSeconds(2)
 
 /**
  * Which service-config application the MOTD document belongs to.
@@ -210,6 +215,8 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private var metrics: ProxyMetrics? = null
     private var tabList: TabList? = null
     private var bedrockRoster: BedrockRoster? = null
+    private val tabParties = TabParties()
+    private var partySubject: String? = null
 
     /**
      * The network-wide MOTD, or null when this proxy has no service-config to read it from. Null
@@ -330,8 +337,14 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 roleQuery = { ProxyServiceRegistry.get(PlayerRoleQuery::class.java) },
                 serverQuery = { ProxyServiceRegistry.get(ServerDisplayQuery::class.java) },
                 isBedrock = roster::isBedrock,
+                partyOf = tabParties::partyOf,
             )
         tabList = tab
+        partySubject = TabParties.subject(System.getenv("GROUNDS_ENVIRONMENT"))
+        partySubject?.let { subject ->
+            crossProxySubscriptions +=
+                natsHandler.subscribe(subject) { if (tabParties.receive(it)) tab.refreshAll() }
+        }
         proxy.commandManager.register("proxydebug", ProxyDebugCommand(messages))
 
         val proxyId = System.getenv("PROXY_ID").orEmpty()
@@ -559,6 +572,22 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     fun onLogin(event: PostLoginEvent) {
         bedrockRoster?.refresh()
         tabList?.refresh(event.player)
+        lookUpParty(event.player.uniqueId)
+    }
+
+    /** Party events only cover changes, so a player who just came online asks for their party. */
+    private fun lookUpParty(player: UUID) {
+        val subject = partySubject ?: return
+        proxy.scheduler
+            .buildTask(
+                this,
+                Runnable {
+                    val reply =
+                        natsHandler.request("$subject.of", player.toString(), PARTY_LOOKUP_TIMEOUT)
+                    if (reply != null && tabParties.receive(reply, player)) tabList?.refreshAll()
+                },
+            )
+            .schedule()
     }
 
     /**

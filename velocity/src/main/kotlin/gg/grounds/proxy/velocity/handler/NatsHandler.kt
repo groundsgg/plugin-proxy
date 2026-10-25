@@ -65,6 +65,17 @@ class NatsHandler(private val natsUrl: String, private val logger: Logger) : Aut
         }
     }
 
+    /** The reply's body, or null when NATS is away or nobody answered within [timeout]. */
+    fun request(subject: String, data: String, timeout: Duration): String? {
+        if (!isConnected) return null
+        return runCatching {
+                connection.request(subject, data.toByteArray(StandardCharsets.UTF_8), timeout)
+            }
+            .getOrNull()
+            ?.data
+            ?.toString(StandardCharsets.UTF_8)
+    }
+
     fun unsubscribe(subscription: Subscription) {
         dispatcher.unsubscribe(subscription)
     }
