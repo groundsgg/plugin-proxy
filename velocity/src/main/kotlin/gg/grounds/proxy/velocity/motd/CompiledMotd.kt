@@ -48,9 +48,8 @@ class CompiledMotd(document: JsonObject, private val alignments: List<String>) {
                         width +=
                             (advances[char] ?: 6) +
                                 (if (
-                                    char != " " &&
-                                        style.decoration(TextDecoration.BOLD) ==
-                                            TextDecoration.State.TRUE
+                                    style.decoration(TextDecoration.BOLD) ==
+                                        TextDecoration.State.TRUE
                                 )
                                     1
                                 else 0)
@@ -60,19 +59,57 @@ class CompiledMotd(document: JsonObject, private val alignments: List<String>) {
             measure(line, Style.empty())
             val remaining = (lineWidth - width).coerceAtLeast(0)
             val alignment = alignments.getOrNull(index) ?: "left"
-            val spaces =
+            val target =
                 when (alignment) {
-                    "center" -> kotlin.math.floor(remaining / 8.0 + .5).toInt()
-                    "right" -> kotlin.math.floor(remaining / 4.0 + .5).toInt()
-                    else -> 0
+                    "center" -> remaining / 2.0
+                    "right" -> remaining.toDouble()
+                    else -> 0.0
                 }
+            val (regular, bold) = padding(target, remaining)
             if (index > 0) result = result.append(Component.newline())
-            result = result.append(Component.text(" ".repeat(spaces))).append(line)
+            if (regular > 0)
+                result =
+                    result.append(
+                        Component.text(" ".repeat(regular)).decoration(TextDecoration.BOLD, false)
+                    )
+            if (bold > 0)
+                result =
+                    result.append(
+                        Component.text(" ".repeat(bold)).decoration(TextDecoration.BOLD, true)
+                    )
+            result = result.append(line)
         }
         return result
     }
 
     companion object {
+        /** Same bounded 4/5-pixel native space search as library-motd. */
+        private fun padding(target: Double, available: Int): Pair<Int, Int> {
+            var regular = 0
+            var bold = 0
+            var advance = 0
+            var error = kotlin.math.abs(target)
+            for (b in 0..3) {
+                val near = (target - b * 5) / 4
+                for (r in listOf(kotlin.math.floor(near).toInt(), kotlin.math.ceil(near).toInt())) {
+                    val candidate = r * 4 + b * 5
+                    if (r < 0 || candidate > available) continue
+                    val distance = kotlin.math.abs(candidate - target)
+                    if (
+                        distance < error ||
+                            (distance == error &&
+                                (candidate > advance || (candidate == advance && b < bold)))
+                    ) {
+                        regular = r
+                        bold = b
+                        advance = candidate
+                        error = distance
+                    }
+                }
+            }
+            return regular to bold
+        }
+
         private val advances: Map<String, Int> =
             CompiledMotd::class
                 .java
