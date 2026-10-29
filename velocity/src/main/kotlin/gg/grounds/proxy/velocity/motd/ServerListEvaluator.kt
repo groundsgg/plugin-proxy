@@ -38,19 +38,29 @@ object ServerListEvaluator {
                 )
         if (compiledMotd != null)
             builder.description(
-                compiledMotd.render(values, if (clientProtocol in 774..777) 267 else 271)
+                compiledMotd.render(
+                    values,
+                    if (clientProtocol in 774..777) 267 else 271,
+                    clientProtocol >= 773,
+                )
             )
-        else if (compiledFallback != null) builder.description(compiledFallback.render(values))
+        else if (compiledFallback != null)
+            builder.description(
+                projectNativeSprites(compiledFallback.render(values), clientProtocol >= 773)
+            )
         else
             fallbackText?.let {
                 builder.description(
-                    MiniMessage.miniMessage()
-                        .deserialize(
-                            MotdPlaceholders.render(
-                                it,
-                                MotdPlaceholders.Context(region, continent, players, max),
-                            )
-                        )
+                    projectNativeSprites(
+                        MiniMessage.miniMessage()
+                            .deserialize(
+                                MotdPlaceholders.render(
+                                    it,
+                                    MotdPlaceholders.Context(region, continent, players, max),
+                                )
+                            ),
+                        clientProtocol >= 773,
+                    )
                 )
             }
         template?.let {

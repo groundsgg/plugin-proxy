@@ -3,9 +3,11 @@ package gg.grounds.proxy.velocity.motd
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.ObjectComponent
 import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.Style
 import net.kyori.adventure.text.format.TextDecoration
+import net.kyori.adventure.text.`object`.SpriteObjectContents
 
 /** Splits resolved components without carrying implicit style across independent client values. */
 internal fun componentLines(component: Component): List<Component> {
@@ -34,8 +36,12 @@ internal fun componentLines(component: Component): List<Component> {
 class CompiledMotd(document: JsonObject, private val alignments: List<String>) {
     private val text = CompiledServerText(document)
 
-    fun render(values: Map<String, String>, lineWidth: Int = 271): Component {
-        val rendered = text.render(values)
+    fun render(
+        values: Map<String, String>,
+        lineWidth: Int = 271,
+        supportsSprites: Boolean = true,
+    ): Component {
+        val rendered = projectNativeSprites(text.render(values), supportsSprites)
         if (alignments.all { it == "left" }) return rendered
         var result: Component = Component.empty()
         for ((index, line) in componentLines(rendered).withIndex()) {
@@ -54,6 +60,12 @@ class CompiledMotd(document: JsonObject, private val alignments: List<String>) {
                                     1
                                 else 0)
                     }
+                else if (node is ObjectComponent && node.contents() is SpriteObjectContents)
+                    width +=
+                        8 +
+                            if (style.decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE)
+                                1
+                            else 0
                 node.children().forEach { measure(it, style) }
             }
             measure(line, Style.empty())

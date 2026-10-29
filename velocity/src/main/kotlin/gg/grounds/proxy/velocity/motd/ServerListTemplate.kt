@@ -142,6 +142,18 @@ class CompiledServerText private constructor(private val source: String) {
                 return when (n.get("type").asString) {
                     "text" -> escape(n.get("value").asString)
                     "newline" -> "<newline>"
+                    "sprite" -> {
+                        val atlas = n.get("atlas").asString
+                        val sprite = n.get("sprite").asString
+                        for (id in listOf(atlas, sprite)) require(
+                            id.length <= 256 &&
+                                Regex("[a-z0-9_.-]+:[a-z0-9_./-]+").matches(id) &&
+                                !id.contains("//") &&
+                                !id.substringAfter(':').startsWith('/') &&
+                                id.substringAfter(':').split('/').none { it == "." || it == ".." }
+                        )
+                        "<sprite:\"$atlas\":\"$sprite\">"
+                    }
                     "placeholder" -> "{{${n.get("name").asString}}}"
                     "opaque" ->
                         when (n.get("format").asString) {
@@ -165,6 +177,10 @@ class CompiledServerText private constructor(private val source: String) {
                                 node(it.asJsonObject, depth + 1)
                             }
                         style.get("color")?.asString?.let { text = "<$it>$text</$it>" }
+                        style.get("shadowColor")?.asLong?.let {
+                            val argb = (it and 0xffffffffL).toString(16).padStart(8, '0')
+                            text = "<shadow:#${argb.drop(2)}${argb.take(2)}>$text</shadow>"
+                        }
                         style.getAsJsonArray("gradient")?.let { stops ->
                             require(stops.size() >= 2)
                             val colors =
@@ -182,7 +198,7 @@ class CompiledServerText private constructor(private val source: String) {
                                 val rendered = MM.deserialize(text)
                                 val flat =
                                     mutableListOf<
-                                        Pair<String, net.kyori.adventure.text.format.Style>
+                                        Pair<Component, net.kyori.adventure.text.format.Style>
                                     >()
                                 fun flatten(
                                     c: Component,
@@ -197,20 +213,31 @@ class CompiledServerText private constructor(private val source: String) {
                                             )
                                     if (c is net.kyori.adventure.text.TextComponent)
                                         c.content().codePoints().forEach {
-                                            flat.add(String(Character.toChars(it)) to effective)
+                                            flat.add(
+                                                Component.text(String(Character.toChars(it))) to
+                                                    effective
+                                            )
                                         }
+                                    else flat.add(c.children(emptyList()) to effective)
                                     c.children().forEach { flatten(it, effective) }
                                 }
                                 flatten(rendered, net.kyori.adventure.text.format.Style.empty())
-                                val visible = flat.count { it.first != "\n" }
+                                val visible =
+                                    flat.count {
+                                        (it.first as? net.kyori.adventure.text.TextComponent)
+                                            ?.content() != "\n"
+                                    }
                                 var index = 0
                                 text =
                                     MM.serialize(
                                         flat.fold(Component.empty() as Component) {
                                             acc,
-                                            (char, oldStyle) ->
-                                            if (char == "\n")
-                                                acc.append(Component.text(char).style(oldStyle))
+                                            (part, oldStyle) ->
+                                            if (
+                                                part is net.kyori.adventure.text.TextComponent &&
+                                                    part.content() == "\n"
+                                            )
+                                                acc.append(part.style(oldStyle))
                                             else {
                                                 val t =
                                                     if (visible <= 1) 0.0
@@ -256,18 +283,22 @@ class CompiledServerText private constructor(private val source: String) {
                                                         channel(0),
                                                     )
                                                 acc.append(
-                                                    Component.text(char)
-                                                        .style(
-                                                            if (
-                                                                oldStyle.color() == null ||
-                                                                    oldStyle
-                                                                        .color()
-                                                                        ?.asHexString() ==
-                                                                        style.get("color")?.asString
-                                                            )
-                                                                oldStyle.color(color)
-                                                            else oldStyle
+                                                    part.style(
+                                                        if (
+                                                            oldStyle.color() == null ||
+                                                                oldStyle
+                                                                    .color()
+                                                                    ?.asHexString()
+                                                                    ?.equals(
+                                                                        style
+                                                                            .get("color")
+                                                                            ?.asString,
+                                                                        ignoreCase = true,
+                                                                    ) == true
                                                         )
+                                                            oldStyle.color(color)
+                                                        else oldStyle
+                                                    )
                                                 )
                                             }
                                         }
