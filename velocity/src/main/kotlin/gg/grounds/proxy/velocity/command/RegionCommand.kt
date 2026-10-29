@@ -90,14 +90,23 @@ class RegionCommand(
         messages.send(player, ProxySystemMessage.REGION_HEADER)
         catalog.regions.forEach { region ->
             val isHere = here != null && region.code.equals(here, true)
-            messages.send(
-                player,
-                if (isHere) ProxySystemMessage.REGION_ENTRY_CURRENT
-                else ProxySystemMessage.REGION_ENTRY,
-                "region" to region.code,
-            )
+            if (isHere) {
+                messages.send(
+                    player,
+                    ProxySystemMessage.REGION_ENTRY_CURRENT,
+                    "region" to region.code,
+                )
+            } else {
+                messages.sendInteractive(
+                    player,
+                    ProxySystemMessage.REGION_ENTRY,
+                    CommandAction.run("/region ${region.code}"),
+                    "/region ${region.code}",
+                    "region" to region.code,
+                )
+            }
         }
-        messages.send(player, ProxySystemMessage.REGION_USAGE, "syntax" to "/region <code>")
+        messages.send(player, ProxySystemMessage.REGION_USAGE)
     }
 
     override fun suggest(invocation: SimpleCommand.Invocation): List<String> {
