@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.11.0](https://github.com/groundsgg/plugin-proxy/compare/v2.10.0...v2.11.0) (2026-10-29)
+
+
+### Features
+
+* **chat:** add clickable proxy region and MOTD actions ([#115](https://github.com/groundsgg/plugin-proxy/issues/115)) ([1f8ab37](https://github.com/groundsgg/plugin-proxy/commit/1f8ab37316b097cffd5e9237dfcf8adfd9651692))
+* **metrics:** publish the proxy registry as a proxy service ([#107](https://github.com/groundsgg/plugin-proxy/issues/107)) ([b86c9d2](https://github.com/groundsgg/plugin-proxy/commit/b86c9d20fce491052fa17dd545afeee314b51016))
+* **motd:** compile and project native atlas sprites by client protocol ([#114](https://github.com/groundsgg/plugin-proxy/issues/114)) ([0528c1e](https://github.com/groundsgg/plugin-proxy/commit/0528c1eae22f27500cf643e019d47ac1f62aeb05))
+* **proxy:** support standalone server-list templates ([#104](https://github.com/groundsgg/plugin-proxy/issues/104)) ([0b9481f](https://github.com/groundsgg/plugin-proxy/commit/0b9481f9ddb65d3daa9049eb5bd871fea3fa8c72))
+* **tab:** mark party members without voice ([#109](https://github.com/groundsgg/plugin-proxy/issues/109)) ([6b8a53d](https://github.com/groundsgg/plugin-proxy/commit/6b8a53d6bf503efafa78fb46b84cd6fdeb01316e))
+* **tab:** show each player's voice state in the tab list ([#108](https://github.com/groundsgg/plugin-proxy/issues/108)) ([d150d3d](https://github.com/groundsgg/plugin-proxy/commit/d150d3ddab643a66b6f678a91c64721b0a03334d))
+* **tab:** show the viewer's party bold at the top of the tab list ([#106](https://github.com/groundsgg/plugin-proxy/issues/106)) ([09d6e0b](https://github.com/groundsgg/plugin-proxy/commit/09d6e0b461c9427befa1568aa2296e84a147d67a))
+
+
+### Bug Fixes
+
+* **motd:** match precise native alignment to the shared viewer ([#113](https://github.com/groundsgg/plugin-proxy/issues/113)) ([fc2203b](https://github.com/groundsgg/plugin-proxy/commit/fc2203bc39ff3f7e8e7a471821d835efa52e4f1e))
+* **proxy:** show maintenance in protocol and make MOTD optional ([#102](https://github.com/groundsgg/plugin-proxy/issues/102)) ([2e96dad](https://github.com/groundsgg/plugin-proxy/commit/2e96dad0d62f7a128aeeaab2c233fab8359b2501))
+
 ## [2.10.0](https://github.com/groundsgg/plugin-proxy/compare/v2.9.0...v2.10.0) (2026-10-19)
 
 
