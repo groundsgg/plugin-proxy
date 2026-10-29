@@ -66,6 +66,15 @@ class InteractiveCommandMessageTest {
         assertEquals(CommandAction.suggest("/motd reset"), reset)
     }
 
+    @Test
+    fun `MOTD help preserves the literal newline tag in each locale`() {
+        locales.forEach { locale ->
+            val text = plain(messages.render(ProxySystemMessage.MOTD_HELP_SET, locale))
+            org.junit.jupiter.api.Assertions.assertTrue(text.contains("<newline>"), text)
+            assertFalse(text.contains("&lt;"), text)
+        }
+    }
+
     private fun hoverText(component: net.kyori.adventure.text.Component): String =
         PlainTextComponentSerializer.plainText()
             .serialize(component.hoverEvent()!!.value() as net.kyori.adventure.text.Component)
