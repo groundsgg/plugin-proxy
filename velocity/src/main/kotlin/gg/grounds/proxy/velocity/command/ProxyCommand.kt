@@ -71,16 +71,25 @@ class ProxyCommand(
             ?.proxies
             ?.sortedBy { it.proxyId }
             ?.forEach { entry ->
-                messages.send(
-                    source,
-                    if (entry.proxyId == proxyId) ProxySystemMessage.PROXY_ENTRY_CURRENT
-                    else ProxySystemMessage.PROXY_ENTRY,
-                    "proxy" to entry.proxyId,
-                    "region" to (entry.region ?: "—"),
-                    "count" to entry.players,
-                )
+                val arguments =
+                    arrayOf(
+                        "proxy" to entry.proxyId,
+                        "region" to (entry.region ?: "—"),
+                        "count" to entry.players,
+                    )
+                if (entry.proxyId == proxyId) {
+                    messages.send(source, ProxySystemMessage.PROXY_ENTRY_CURRENT, *arguments)
+                } else {
+                    messages.sendInteractive(
+                        source,
+                        ProxySystemMessage.PROXY_ENTRY,
+                        CommandAction.run("/proxy ${entry.proxyId}"),
+                        "/proxy ${entry.proxyId}",
+                        *arguments,
+                    )
+                }
             }
-        messages.send(source, ProxySystemMessage.PROXY_USAGE, "syntax" to "/proxy <id>")
+        messages.send(source, ProxySystemMessage.PROXY_USAGE)
     }
 
     override fun suggest(invocation: SimpleCommand.Invocation): List<String> {

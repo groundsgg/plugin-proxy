@@ -98,10 +98,11 @@ class MotdCommand(
 
     private fun set(source: CommandSource, text: String) {
         if (text.isEmpty()) {
-            messages.send(
+            messages.sendInteractive(
                 source,
                 ProxySystemMessage.MOTD_USAGE_SET,
-                "usage" to "/motd set <MiniMessage>",
+                CommandAction.suggest("/motd set "),
+                "/motd set <MiniMessage>",
             )
             return
         }
@@ -117,10 +118,11 @@ class MotdCommand(
 
     private fun import(source: CommandSource, idOrUrl: String) {
         if (idOrUrl.isEmpty()) {
-            messages.send(
+            messages.sendInteractive(
                 source,
                 ProxySystemMessage.MOTD_USAGE_IMPORT,
-                "usage" to "/motd import <motd.gg link or id>",
+                CommandAction.suggest("/motd import "),
+                "/motd import <motd.gg link or id>",
             )
             return
         }
@@ -161,16 +163,22 @@ class MotdCommand(
     private fun maxPlayers(source: CommandSource, argument: String) {
         val document = manager.current()
         if (document == null) {
-            messages.send(source, ProxySystemMessage.MOTD_REQUIRED_FOR_MAX_PLAYERS)
+            messages.sendInteractive(
+                source,
+                ProxySystemMessage.MOTD_REQUIRED_FOR_MAX_PLAYERS,
+                CommandAction.suggest("/motd set "),
+                "/motd set <MiniMessage>",
+            )
             return
         }
         val value =
             when {
                 argument.isEmpty() -> {
-                    messages.send(
+                    messages.sendInteractive(
                         source,
                         ProxySystemMessage.MOTD_USAGE_MAX_PLAYERS,
-                        "usage" to "/motd maxplayers <number|clear>",
+                        CommandAction.suggest("/motd maxplayers "),
+                        "/motd maxplayers <number|clear>",
                     )
                     return
                 }
@@ -237,7 +245,7 @@ class MotdCommand(
                 ProxySystemMessage.MOTD_HELP_RESET to "/motd reset",
             )
             .forEach { (key, usage) ->
-                messages.send(source, key, "usage" to usage, "newline" to "<newline>")
+                messages.sendInteractive(source, key, motdHelpAction(usage), usage)
             }
         messages.send(
             source,
