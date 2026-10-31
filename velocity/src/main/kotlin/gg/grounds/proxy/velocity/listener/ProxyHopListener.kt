@@ -8,10 +8,11 @@ import com.velocitypowered.api.network.ProtocolVersion
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import gg.grounds.i18n.Translations
+import gg.grounds.proxy.api.PlayerSessionTransfer
+import gg.grounds.proxy.api.ProxyServiceRegistry
 import gg.grounds.proxy.velocity.ProxyHop
 import gg.grounds.proxy.velocity.ProxySystemMessage
 import gg.grounds.proxy.velocity.RegionCatalog
-import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -45,7 +46,7 @@ class ProxyHopListener(
     fun send(player: Player, ticket: ProxyHop.Ticket): Boolean {
         val target = address() ?: return false
         val payload = ProxyHop.encode(ticket)
-        val stage = Pending(payload, target)
+        val stage = Pending(payload, target, ticket.target)
         pending[player.uniqueId] = stage
         try {
             player.storeCookie(COOKIE_KEY, payload)
@@ -135,12 +136,19 @@ class ProxyHopListener(
 
     private fun complete(player: Player, stage: Pending) {
         if (!pending.remove(player.uniqueId, stage) || !player.isActive) return
-        player.transferToHost(
-            InetSocketAddress.createUnresolved(stage.target.host, stage.target.port)
-        )
+        val transfer = ProxyServiceRegistry.get(PlayerSessionTransfer::class.java)
+        if (
+            transfer?.transferToHost(player.uniqueId, stage.target.host, stage.target.port) != true
+        ) {
+            giveUp(player, stage.wantedProxy)
+        }
     }
 
-    private class Pending(val payload: ByteArray, val target: RegionCatalog.Region)
+    private class Pending(
+        val payload: ByteArray,
+        val target: RegionCatalog.Region,
+        val wantedProxy: String,
+    )
 
     private companion object {
         val COOKIE_KEY: Key = Key.key(ProxyHop.KEY)
