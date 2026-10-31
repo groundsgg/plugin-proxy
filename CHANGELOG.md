@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.1](https://github.com/groundsgg/plugin-proxy/compare/v2.11.0...v2.11.1) (2026-10-31)
+
+
+### Bug Fixes
+
+* **proxy:** send proxy hops through the session handoff ([#116](https://github.com/groundsgg/plugin-proxy/issues/116)) ([2aa93c0](https://github.com/groundsgg/plugin-proxy/commit/2aa93c06beddf184c14d79271b374375f968f09f))
+
 ## [2.11.0](https://github.com/groundsgg/plugin-proxy/compare/v2.10.0...v2.11.0) (2026-10-29)
 
 
