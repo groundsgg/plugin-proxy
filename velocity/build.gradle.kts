@@ -2,7 +2,7 @@ plugins { id("gg.grounds.velocity") version "0.1.1" }
 
 repositories {
     maven {
-        url = uri("https://maven.pkg.github.com/groundsgg/*")
+        url = uri("https://maven.pkg.github.com/groundsgg/library-minigame-api")
         credentials {
             username =
                 providers.gradleProperty("github.user").orNull ?: System.getenv("GITHUB_ACTOR")
@@ -14,6 +14,7 @@ repositories {
 
 dependencies {
     implementation(project(":api"))
+    implementation("gg.grounds:library-minigame-api-hud:0.6.1-announcement-bullet-75f53d5")
     // service-config answers REST; the MOTD store parses its JSON with gson, the
     // way plugin-match's and plugin-social's clients do.
     implementation("com.google.code.gson:gson:2.15.0")

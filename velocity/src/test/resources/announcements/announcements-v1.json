@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "seeds": {
+    "schemaVersion": 1,
+    "announcements": [
+      {
+        "id": "7c354d9c-6b16-4f06-9f15-000000000001",
+        "name": "Discord",
+        "enabled": true,
+        "serverTypes": [
+          "lobby"
+        ],
+        "text": {
+          "en": "Join our community",
+          "de": "Komm in unsere Community",
+          "fr": "Rejoins notre communauté",
+          "es": "Únete a nuestra comunidad"
+        },
+        "address": "GRNDS.LINK/DISCORD"
+      },
+      {
+        "id": "7c354d9c-6b16-4f06-9f15-000000000002",
+        "name": "Shop",
+        "enabled": true,
+        "serverTypes": [
+          "lobby"
+        ],
+        "text": {
+          "en": "Support Grounds",
+          "de": "Unterstütze Grounds",
+          "fr": "Soutiens Grounds",
+          "es": "Apoya a Grounds"
+        },
+        "address": "SHOP.GROUNDS.GG"
+      },
+      {
+        "id": "7c354d9c-6b16-4f06-9f15-000000000003",
+        "name": "Tournaments",
+        "enabled": true,
+        "serverTypes": [
+          "lobby"
+        ],
+        "text": {
+          "en": "Compete in tournaments",
+          "de": "Tritt in Turnieren an",
+          "fr": "Participe aux tournois",
+          "es": "Compite en torneos"
+        },
+        "address": "GRNDS.LINK/TOURNAMENTS"
+      }
+    ]
+  },
+  "valid": [
+    {
+      "schemaVersion": 1,
+      "announcements": []
+    }
+  ],
+  "invalid": [
+    {
+      "schemaVersion": 2,
+      "announcements": []
+    }
+  ],
+  "layoutCases": [
+    {
+      "text": "abc",
+      "width": 23
+    },
+    {
+      "text": "i",
+      "width": 7
+    },
+    {
+      "text": "ü",
+      "width": 11
+    }
+  ]
+}
