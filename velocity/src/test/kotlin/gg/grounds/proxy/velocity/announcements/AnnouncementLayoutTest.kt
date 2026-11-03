@@ -14,10 +14,10 @@ class AnnouncementLayoutTest {
             )
         val entry = settings.announcements.single()
         val pill = AnnouncementLayout.pill(entry, Locale.ENGLISH)
-        assertEquals(listOf("abc", " · ", "example.gg"), pill.runs.map { it.text })
+        assertEquals(listOf("abc", " • ", "example.gg"), pill.runs.map { it.text })
         assertEquals(listOf(0xF3F0EA, 0xC1B9AA, 0xE7B84B), pill.runs.map { it.rgb })
         assertEquals(listOf(false, false, true), pill.runs.map { it.bold })
-        assertEquals(96, gg.grounds.hud.HudPills.width(pill))
+        assertEquals(97, gg.grounds.hud.HudPills.width(pill))
         val withoutLink = AnnouncementLayout.pill(entry.copy(address = null), Locale.ENGLISH)
         assertEquals(listOf("abc"), withoutLink.runs.map { it.text })
         assertEquals(23, gg.grounds.hud.HudPills.width(withoutLink))
@@ -29,7 +29,7 @@ class AnnouncementLayoutTest {
                     )
             )
         assertEquals(
-            401,
+            402,
             gg.grounds.hud.HudPills.width(
                 AnnouncementLayout.pill(overwide.announcements.single(), Locale.ENGLISH)
             ),
