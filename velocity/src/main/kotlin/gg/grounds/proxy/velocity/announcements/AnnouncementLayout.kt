@@ -11,8 +11,12 @@ object AnnouncementLayout {
         HudPill(
             buildList {
                 add(HudRun(entry.caption(locale), 0xF3F0EA))
-                entry.address?.let { add(HudRun(it, 0xE7B84B, true)) }
-            }
+                entry.address?.let {
+                    add(HudRun(" · ", 0xC1B9AA))
+                    add(HudRun(it, 0xE7B84B, true))
+                }
+            },
+            runGap = 0,
         )
 
     fun groups(

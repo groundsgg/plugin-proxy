@@ -7,6 +7,41 @@ import org.junit.jupiter.api.Test
 
 class AnnouncementLayoutTest {
     @Test
+    fun `caption and link share a pill with a sand separator and ordinary spaces`() {
+        val settings =
+            AnnouncementSettings.parse(
+                """{"schemaVersion":1,"announcements":[{"id":"7c354d9c-6b16-4f06-9f15-000000000001","name":"test","enabled":true,"serverTypes":["lobby"],"text":{"en":"abc"},"address":"example.gg"}]}"""
+            )
+        val entry = settings.announcements.single()
+        val pill = AnnouncementLayout.pill(entry, Locale.ENGLISH)
+        assertEquals(listOf("abc", " · ", "example.gg"), pill.runs.map { it.text })
+        assertEquals(listOf(0xF3F0EA, 0xC1B9AA, 0xE7B84B), pill.runs.map { it.rgb })
+        assertEquals(listOf(false, false, true), pill.runs.map { it.bold })
+        assertEquals(96, gg.grounds.hud.HudPills.width(pill))
+        val withoutLink = AnnouncementLayout.pill(entry.copy(address = null), Locale.ENGLISH)
+        assertEquals(listOf("abc"), withoutLink.runs.map { it.text })
+        assertEquals(23, gg.grounds.hud.HudPills.width(withoutLink))
+        val overwide =
+            settings.copy(
+                announcements =
+                    listOf(
+                        entry.copy(text = mapOf("en" to "W".repeat(55)), address = "W".repeat(8))
+                    )
+            )
+        assertEquals(
+            401,
+            gg.grounds.hud.HudPills.width(
+                AnnouncementLayout.pill(overwide.announcements.single(), Locale.ENGLISH)
+            ),
+        )
+        val json =
+            com.google.gson
+                .Gson()
+                .toJson(mapOf("schemaVersion" to 1, "announcements" to overwide.announcements))
+        assertThrows(IllegalArgumentException::class.java) { AnnouncementSettings.parse(json) }
+    }
+
+    @Test
     fun `shared seeds validate and all languages respect single pill width`() {
         val contract =
             javaClass
