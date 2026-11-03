@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
     implementation(project(":api"))
-    implementation("gg.grounds:library-minigame-api-hud:feat-portal-announcements-SNAPSHOT")
+    implementation("gg.grounds:library-minigame-api-hud:0.6.1-announcements-c05cd2a")
     // service-config answers REST; the MOTD store parses its JSON with gson, the
     // way plugin-match's and plugin-social's clients do.
     implementation("com.google.code.gson:gson:2.15.0")
