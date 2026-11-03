@@ -226,9 +226,10 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
     /** The per-server counts of a fresh broadcast that carried them, as [NetworkPlayerCounts]. */
     private val broadcastServerCounts: NetworkPlayerCounts?
-        get() = cachedPlayerCount?.let {
-            broadcastServerCounts(it.total, it.servers, it.receivedAtNanos, System.nanoTime())
-        }
+        get() =
+            cachedPlayerCount?.let {
+                broadcastServerCounts(it.total, it.servers, it.receivedAtNanos, System.nanoTime())
+            }
 
     private var countSubscription: Subscription? = null
     private var metrics: ProxyMetrics? = null

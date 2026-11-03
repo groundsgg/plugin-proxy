@@ -2,7 +2,7 @@ plugins { id("gg.grounds.velocity") version "0.1.1" }
 
 repositories {
     maven {
-        url = uri("https://maven.pkg.github.com/groundsgg/*")
+        url = uri("https://maven.pkg.github.com/groundsgg/library-minigame-api")
         credentials {
             username =
                 providers.gradleProperty("github.user").orNull ?: System.getenv("GITHUB_ACTOR")

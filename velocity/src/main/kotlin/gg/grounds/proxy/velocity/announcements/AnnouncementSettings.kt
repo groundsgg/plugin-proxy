@@ -34,51 +34,54 @@ data class AnnouncementSettings(val announcements: List<Announcement>) {
                 )
                 val entries = root["announcements"].asJsonArray
                 require(entries.size() <= 32)
-                val announcements = entries.map { node ->
-                    val e = node.asJsonObject
-                    e.fields(setOf("id", "name", "enabled", "serverTypes", "text", "address"))
-                    val id = e["id"].string().lowercase(Locale.ROOT)
-                    require(
-                        id.matches(
-                            Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+                val announcements =
+                    entries.map { node ->
+                        val e = node.asJsonObject
+                        e.fields(setOf("id", "name", "enabled", "serverTypes", "text", "address"))
+                        val id = e["id"].string().lowercase(Locale.ROOT)
+                        require(
+                            id.matches(
+                                Regex(
+                                    "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                                )
+                            )
                         )
-                    )
-                    val name = e["name"].string()
-                    require(name.isNotBlank() && name.length <= 80)
-                    require(e["enabled"].asJsonPrimitive.isBoolean)
-                    val enabled = e["enabled"].asBoolean
-                    val roles =
-                        e["serverTypes"].asJsonArray.map {
-                            it.string().also { role ->
-                                require(role.matches(Regex("[a-z0-9][a-z0-9._-]{0,63}")))
+                        val name = e["name"].string()
+                        require(name.isNotBlank() && name.length <= 80)
+                        require(e["enabled"].asJsonPrimitive.isBoolean)
+                        val enabled = e["enabled"].asBoolean
+                        val roles =
+                            e["serverTypes"].asJsonArray.map {
+                                it.string().also { role ->
+                                    require(role.matches(Regex("[a-z0-9][a-z0-9._-]{0,63}")))
+                                }
+                            }
+                        require(
+                            roles.size <= 32 &&
+                                roles.distinct().size == roles.size &&
+                                (!enabled || roles.isNotEmpty())
+                        )
+                        val texts =
+                            e["text"].asJsonObject.entrySet().associate { (lang, value) ->
+                                require(lang in setOf("en", "de", "fr", "es"))
+                                lang to value.string().also { validateText(it, 256) }
+                            }
+                        require("en" in texts)
+                        val address =
+                            e["address"]
+                                .takeUnless { it.isJsonNull }
+                                ?.string()
+                                ?.also { validateText(it, 128) }
+                        Announcement(id, name, enabled, roles, texts, address).also { entry ->
+                            for (lang in texts.keys) require(
+                                gg.grounds.hud.HudPills.width(
+                                    AnnouncementLayout.pill(entry, Locale.forLanguageTag(lang))
+                                ) <= HudMetrics.layout("maxWidth")
+                            ) {
+                                "Announcement exceeds HUD width"
                             }
                         }
-                    require(
-                        roles.size <= 32 &&
-                            roles.distinct().size == roles.size &&
-                            (!enabled || roles.isNotEmpty())
-                    )
-                    val texts =
-                        e["text"].asJsonObject.entrySet().associate { (lang, value) ->
-                            require(lang in setOf("en", "de", "fr", "es"))
-                            lang to value.string().also { validateText(it, 256) }
-                        }
-                    require("en" in texts)
-                    val address =
-                        e["address"]
-                            .takeUnless { it.isJsonNull }
-                            ?.string()
-                            ?.also { validateText(it, 128) }
-                    Announcement(id, name, enabled, roles, texts, address).also { entry ->
-                        for (lang in texts.keys) require(
-                            gg.grounds.hud.HudPills.width(
-                                AnnouncementLayout.pill(entry, Locale.forLanguageTag(lang))
-                            ) <= HudMetrics.layout("maxWidth")
-                        ) {
-                            "Announcement exceeds HUD width"
-                        }
                     }
-                }
                 require(announcements.map { it.id }.distinct().size == announcements.size)
                 val canonical =
                     com.google.gson
