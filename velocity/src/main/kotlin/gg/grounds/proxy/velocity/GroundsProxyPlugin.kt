@@ -56,6 +56,7 @@ import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
 import gg.grounds.proxy.velocity.tab.TabParties
 import gg.grounds.proxy.velocity.tab.VoicePresences
+import gg.grounds.proxy.velocity.welcome.WelcomeGlyphs
 import gg.grounds.proxy.velocity.welcome.WelcomeLinks
 import gg.grounds.proxy.velocity.welcome.WelcomeListener
 import gg.grounds.proxy.velocity.welcome.WelcomeMessage
@@ -312,6 +313,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         proxy.channelRegistrar.register(lobbyIdentifier)
         proxy.eventManager.register(this, LobbyCountsListener(lobbyIdentifier, service, logger))
 
+        val pixelIconsEnabled = WelcomeGlyphs.enabled(System.getenv())
         val welcomeListener =
             WelcomeListener(
                 messages,
@@ -326,6 +328,12 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                     ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
                         ?.appearanceOf(player.uniqueId)
                         ?.ready == true
+                },
+                iconsReady = { player ->
+                    pixelIconsEnabled &&
+                        ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
+                            ?.appearanceOf(player.uniqueId)
+                            ?.ready == true
                 },
             )
         welcome = welcomeListener

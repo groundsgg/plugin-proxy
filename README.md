@@ -24,8 +24,9 @@ Local first, always — a player on this proxy is already in memory and costs no
 
 A fresh network join receives a single welcome block with the large 26px Grounds
 wordmark used by the network HUD, the player's name, and independent Discord,
-TikTok and Shop links on separate lines. Each link includes a native Minecraft
-icon (controller, music note and shopping cart); both icon and label open the link. Delivery waits
+TikTok and Shop links in one horizontal row. The resource pack supplies sharp
+pixel-art brand icons (Discord, TikTok and a shopping bag); both icon and label
+open the link. Delivery waits
 five seconds after the first backend connection so client mod negotiation and
 resource-pack loading can finish. Clients without a verified HUD font pack see the
 Grounds name instead of an unsupported glyph.
@@ -246,3 +247,5 @@ maintenance is active. New maintenance drafts default to an empty override.
 ```
 
 Published on tag as `gg.grounds:plugin-proxy-api` (consume this) and `plugin-proxy-velocity`, and as `ghcr.io/groundsgg/plugin-proxy` — the image carries the shaded JAR at `/jar/plugin.jar` for the `plugin-velocity-jar` Helm chart.
+
+Welcome bitmap icons use `grounds:welcome` U+E400/U+E401/U+E402. Set `WELCOME_FONT_PACK_SHA1S` to the verified platform-pack hashes containing these glyphs and restrict `HUD_FONT_PACK_SHA1S` to that same set. Icons remain disabled unless every HUD-ready hash is covered; unknown packs show plain labels. Existing chat, sidebar and HUD pack allowlists must include a newly activated platform pack as appropriate.

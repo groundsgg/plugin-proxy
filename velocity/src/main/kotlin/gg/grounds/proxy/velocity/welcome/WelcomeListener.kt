@@ -24,6 +24,7 @@ internal class WelcomeListener(
     private val renderer: WelcomeMessage,
     private val schedule: (Runnable) -> ScheduledTask,
     private val logoReady: (Player) -> Boolean,
+    private val iconsReady: (Player) -> Boolean = { false },
 ) : AutoCloseable {
     // Connection objects prevent a delayed task or old disconnect from affecting a reconnect.
     private val sessions = ConcurrentHashMap<Player, Join>()
@@ -130,6 +131,7 @@ internal class WelcomeListener(
                     messages.localeOf(player),
                     logoReady(player),
                     join.voiceInstalled,
+                    iconsReady(player),
                 )
             )
             join.welcomed = true

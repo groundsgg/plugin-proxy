@@ -24,10 +24,14 @@ class WelcomeMessageTest {
 
     @Test
     fun `links below the brand have independent click targets`() {
-        val message = renderer.render("Alex", Locale.ENGLISH, false, true)
+        val message = renderer.render("Alex", Locale.ENGLISH, true, true, true)
         val clickable = nodes(message).filter { url(it) != null }
-        assertEquals(listOf("🎮 Discord", "🎵 TikTok", "🛒 Shop"), clickable.map(::plain))
-        assertTrue(plain(message).contains("🎮 Discord\n🎵 TikTok\n🛒 Shop"))
+        assertEquals(
+            listOf("\uE400 Discord", "\uE401 TikTok", "\uE402 Shop"),
+            clickable.map(::plain),
+        )
+        assertTrue(plain(message).contains("\uE400 Discord   \uE401 TikTok   \uE402 Shop"))
+        assertTrue(nodes(message).any { it.font() == Key.key("grounds:welcome") })
         assertTrue(plain(message).indexOf("Grounds") < plain(message).indexOf("Discord"))
         assertEquals(
             listOf(
@@ -45,7 +49,7 @@ class WelcomeMessageTest {
             listOf(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH, Locale.forLanguageTag("es"))) {
             val missing = renderer.render("Alex", locale, false, false)
             val installed = renderer.render("Alex", locale, false, true)
-            val full = renderer.render("Alex", locale, true, false)
+            val full = renderer.render("Alex", locale, true, false, true)
             assertTrue(
                 plain(full).lines().size <= 10,
                 "The full welcome must fit the default closed chat: $locale",
@@ -79,6 +83,16 @@ class WelcomeMessageTest {
                 it.font() == Key.key("grounds:tab") && plain(it).contains('\uE000')
             }
         )
+    }
+
+    @Test
+    fun `unverified icon packs render readable labels without private glyphs`() {
+        val fallback = plain(renderer.render("Alex", Locale.ENGLISH, true, true, false))
+        assertTrue(fallback.contains("Discord   TikTok   Shop"))
+        assertFalse(fallback.any { it in '\uE400'..'\uE402' })
+        assertFalse(WelcomeGlyphs.supportedBy(setOf("old", "new"), setOf("new")))
+        assertTrue(WelcomeGlyphs.supportedBy(setOf("new"), setOf("new")))
+        assertFalse(WelcomeGlyphs.supportedBy(emptySet(), setOf("new")))
     }
 
     @Test

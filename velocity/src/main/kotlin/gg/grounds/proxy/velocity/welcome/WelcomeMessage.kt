@@ -39,11 +39,13 @@ internal class WelcomeMessage(
         INSTALL("welcome.install"),
     }
 
+    @JvmOverloads
     fun render(
         playerName: String,
         locale: Locale,
         logoReady: Boolean,
         voiceInstalled: Boolean,
+        iconsReady: Boolean = false,
     ): Component {
         val brand =
             if (logoReady)
@@ -59,13 +61,24 @@ internal class WelcomeMessage(
         result
             .append(messages.render(Copy.GREETING, locale, "player" to playerName))
             .appendNewline()
-            .append(communityLink("🎮", "Discord", links.discord))
             .appendNewline()
-            .append(communityLink("🎵", "TikTok", links.tiktok))
-            .appendNewline()
-            .append(communityLink("🛒", "Shop", links.shop))
+            .append(
+                communityLink(
+                    WelcomeGlyphs.DISCORD,
+                    "Discord",
+                    links.discord,
+                    iconsReady && logoReady,
+                )
+            )
+            .append(Component.text("   "))
+            .append(
+                communityLink(WelcomeGlyphs.TIKTOK, "TikTok", links.tiktok, iconsReady && logoReady)
+            )
+            .append(Component.text("   "))
+            .append(communityLink(WelcomeGlyphs.SHOP, "Shop", links.shop, iconsReady && logoReady))
         if (!voiceInstalled) {
             result
+                .appendNewline()
                 .appendNewline()
                 .append(messages.render(Copy.VOICE, locale))
                 .appendNewline()
@@ -74,8 +87,23 @@ internal class WelcomeMessage(
         return result.build()
     }
 
-    private fun communityLink(icon: String, label: String, url: String): Component =
-        link(Component.text("$icon $label", Palette.ACCENT), url)
+    private fun communityLink(
+        icon: Char,
+        label: String,
+        url: String,
+        iconsReady: Boolean,
+    ): Component {
+        val row = Component.text()
+        if (iconsReady) {
+            row.append(
+                    Component.text(icon.toString())
+                        .font(WelcomeGlyphs.FONT)
+                        .color(TextColor.color(0xFFFFFF))
+                )
+                .append(Component.space())
+        }
+        return link(row.append(Component.text(label, Palette.ACCENT)).build(), url)
+    }
 
     private fun link(label: Component, url: String): Component =
         label
