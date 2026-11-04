@@ -25,6 +25,9 @@ class WelcomeMessageTest {
     @Test
     fun `links below the brand have independent click targets`() {
         val message = renderer.render("Alex", Locale.ENGLISH, false, true)
+        val clickable = nodes(message).filter { url(it) != null }
+        assertEquals(listOf("🎮 Discord", "🎵 TikTok", "🛒 Shop"), clickable.map(::plain))
+        assertTrue(plain(message).contains("🎮 Discord\n🎵 TikTok\n🛒 Shop"))
         assertTrue(plain(message).indexOf("Grounds") < plain(message).indexOf("Discord"))
         assertEquals(
             listOf(
@@ -42,6 +45,11 @@ class WelcomeMessageTest {
             listOf(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH, Locale.forLanguageTag("es"))) {
             val missing = renderer.render("Alex", locale, false, false)
             val installed = renderer.render("Alex", locale, false, true)
+            val full = renderer.render("Alex", locale, true, false)
+            assertTrue(
+                plain(full).lines().size <= 10,
+                "The full welcome must fit the default closed chat: $locale",
+            )
             assertTrue(
                 nodes(missing).any {
                     url(it) == "https://modrepo.de/minecraft/voicechat/wiki/installation"
@@ -64,10 +72,11 @@ class WelcomeMessageTest {
         val fallback = renderer.render("<red>Alex", Locale.ENGLISH, false, true)
         val packed = renderer.render("Alex", Locale.ENGLISH, true, true)
         assertTrue(plain(fallback).contains("<red>Alex"))
-        assertFalse(plain(fallback).contains('\uE100'))
+        assertFalse(plain(fallback).contains('\uE000'))
+        assertFalse(plain(packed).contains("GROUNDS"), "The wordmark replaces the text heading")
         assertTrue(
             nodes(packed).any {
-                it.font() == Key.key("grounds:chat") && plain(it).contains('\uE100')
+                it.font() == Key.key("grounds:tab") && plain(it).contains('\uE000')
             }
         )
     }

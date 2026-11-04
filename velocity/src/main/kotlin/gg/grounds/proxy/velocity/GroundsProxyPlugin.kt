@@ -23,7 +23,6 @@ import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
 import gg.grounds.presentation.VelocitySystemMessages
 import gg.grounds.proxy.api.NetworkPlayerCounts
-import gg.grounds.proxy.api.PlayerChatAppearanceQuery
 import gg.grounds.proxy.api.PlayerDisplayQuery
 import gg.grounds.proxy.api.PlayerHudAppearanceQuery
 import gg.grounds.proxy.api.PlayerLocaleQuery
@@ -324,9 +323,9 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                         .schedule()
                 },
                 logoReady = { player ->
-                    ProxyServiceRegistry.get(PlayerChatAppearanceQuery::class.java)
+                    ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
                         ?.appearanceOf(player.uniqueId)
-                        ?.chatFontReady == true
+                        ?.ready == true
                 },
             )
         welcome = welcomeListener

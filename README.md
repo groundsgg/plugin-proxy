@@ -22,10 +22,12 @@ Local first, always — a player on this proxy is already in memory and costs no
 
 ## Join welcome
 
-A fresh network join receives a single welcome block with the Grounds chat logo,
-the player's name, and independent Discord, TikTok and Shop links. Delivery waits
+A fresh network join receives a single welcome block with the large 26px Grounds
+wordmark used by the network HUD, the player's name, and independent Discord,
+TikTok and Shop links on separate lines. Each link includes a native Minecraft
+icon (controller, music note and shopping cart); both icon and label open the link. Delivery waits
 five seconds after the first backend connection so client mod negotiation and
-resource-pack loading can finish. Clients without a verified chat font see the
+resource-pack loading can finish. Clients without a verified HUD font pack see the
 Grounds name instead of an unsupported glyph.
 
 Discord defaults to `https://grnds.link/discord`, matching the lobby bossbar.

@@ -3,6 +3,7 @@ package gg.grounds.proxy.velocity.welcome
 import gg.grounds.i18n.MessageKey
 import gg.grounds.i18n.Palette
 import gg.grounds.i18n.Translations
+import gg.grounds.proxy.velocity.tab.TabGlyphs
 import java.util.Locale
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.text.Component
@@ -44,38 +45,37 @@ internal class WelcomeMessage(
         logoReady: Boolean,
         voiceInstalled: Boolean,
     ): Component {
-        val brand = Component.text("GROUNDS", Palette.TEXT, TextDecoration.BOLD)
-        val result = Component.text().appendNewline()
-        if (logoReady) {
-            result
-                .append(
-                    Component.text("\uE100")
-                        .font(Key.key("grounds:chat"))
-                        .color(TextColor.color(0xFFFFFF))
-                )
-                .append(Component.space())
-        }
+        val brand =
+            if (logoReady)
+                Component.text(TabGlyphs.LOGO.toString())
+                    .font(TabGlyphs.FONT)
+                    .color(TextColor.color(0xFFFFFF))
+            else Component.text("GROUNDS", Palette.TEXT, TextDecoration.BOLD)
+        val result = Component.text().font(Key.key("minecraft:default"))
+        // Reserve room around the 26px wordmark while fitting the default ten-line closed chat.
+        repeat(if (logoReady) 2 else 1) { result.appendNewline() }
+        result.append(brand).appendNewline()
+        if (logoReady) result.appendNewline()
         result
-            .append(brand)
-            .appendNewline()
             .append(messages.render(Copy.GREETING, locale, "player" to playerName))
             .appendNewline()
+            .append(communityLink("🎮", "Discord", links.discord))
             .appendNewline()
-            .append(link(Component.text("Discord", Palette.ACCENT), links.discord))
-            .append(Component.text(" · ", Palette.TEXT_FAINT))
-            .append(link(Component.text("TikTok", Palette.ACCENT), links.tiktok))
-            .append(Component.text(" · ", Palette.TEXT_FAINT))
-            .append(link(Component.text("Shop", Palette.ACCENT), links.shop))
+            .append(communityLink("🎵", "TikTok", links.tiktok))
+            .appendNewline()
+            .append(communityLink("🛒", "Shop", links.shop))
         if (!voiceInstalled) {
             result
-                .appendNewline()
                 .appendNewline()
                 .append(messages.render(Copy.VOICE, locale))
                 .appendNewline()
                 .append(link(messages.render(Copy.INSTALL, locale), INSTALL_URL))
         }
-        return result.appendNewline().build()
+        return result.build()
     }
+
+    private fun communityLink(icon: String, label: String, url: String): Component =
+        link(Component.text("$icon $label", Palette.ACCENT), url)
 
     private fun link(label: Component, url: String): Component =
         label

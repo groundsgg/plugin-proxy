@@ -37,3 +37,5 @@ Execution: primary agent, current suitable checkout on a task branch; no separat
 Review ruling: use a client cookie rather than unconditional transfer suppression, because preferred-region redirects happen at PostLogin before a first backend connection. Cookie state is cosmetic, reset for each LOGIN, queried only for TRANSFER, and tracked by the exact connection.
 
 Validation: `./gradlew spotlessApply test spotlessCheck --offline --console=plain` passed after the transfer fix; 229 tests, zero failures/errors/skips. `git diff --check` passed. Live Minecraft clients and multi-proxy deployment smoke checks were not available in this session.
+
+Visual follow-up: replace the small chat G plus text heading with the verified large HUD wordmark, switch readiness to PlayerHudAppearanceQuery, reserve space for the tall bitmap, and put native icon+label links on separate rows. Updated existing link/layout tests first (three expected failures), then implemented; full Gradle test and formatting checks passed. Stage follow-up is within the existing deployment authorization.

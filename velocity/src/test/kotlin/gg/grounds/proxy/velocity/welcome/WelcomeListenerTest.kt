@@ -307,7 +307,7 @@ class WelcomeListenerTest {
         connect(first)
         ready = true
         pending[0].run()
-        assertTrue(plain(first).contains('\uE100'))
+        assertTrue(plain(first).contains('\uE000'))
         val second = client()
         connect(second)
         listener.close()
