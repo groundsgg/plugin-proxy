@@ -5,9 +5,12 @@ import com.google.inject.Inject
 import com.velocitypowered.api.event.PostOrder
 import com.velocitypowered.api.event.ResultedEvent
 import com.velocitypowered.api.event.Subscribe
+import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.LoginEvent
 import com.velocitypowered.api.event.connection.PostLoginEvent
+import com.velocitypowered.api.event.player.KickedFromServerEvent
 import com.velocitypowered.api.event.player.ServerPostConnectEvent
+import com.velocitypowered.api.event.player.ServerPreConnectEvent
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
 import com.velocitypowered.api.event.proxy.ProxyPingEvent
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
@@ -22,12 +25,15 @@ import gg.grounds.presentation.VelocitySystemMessages
 import gg.grounds.proxy.api.NetworkPlayerCounts
 import gg.grounds.proxy.api.PlayerChatAppearanceQuery
 import gg.grounds.proxy.api.PlayerDisplayQuery
+import gg.grounds.proxy.api.PlayerHudAppearanceQuery
+import gg.grounds.proxy.api.PlayerLocaleQuery
 import gg.grounds.proxy.api.PlayerMessageRenderers
 import gg.grounds.proxy.api.PlayerRoleQuery
 import gg.grounds.proxy.api.PlayerSessionTransfer
 import gg.grounds.proxy.api.ProxyService
 import gg.grounds.proxy.api.ProxyServiceRegistry
 import gg.grounds.proxy.api.ServerDisplayQuery
+import gg.grounds.proxy.velocity.announcements.*
 import gg.grounds.proxy.velocity.command.MotdCommand
 import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.ProxyCommand
@@ -56,8 +62,12 @@ import gg.grounds.proxy.velocity.welcome.WelcomeListener
 import gg.grounds.proxy.velocity.welcome.WelcomeMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.nats.client.Subscription
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -176,6 +186,14 @@ internal fun resolveConfigServiceTarget(
 class GroundsProxyPlugin
 @Inject
 constructor(private val proxy: ProxyServer, private val logger: Logger) {
+    @Volatile private var announcementSettings: AnnouncementSettings? = null
+    private var announcementController: AnnouncementController? = null
+    private var announcementSync: AnnouncementSynchronizer? = null
+    private var announcementStore: AnnouncementConfigStore? = null
+    private var announcementPoll: ScheduledTask? = null
+    private var announcementTick: ScheduledTask? = null
+    private val announcementQueued = AtomicBoolean(false)
+
     private val messages =
         Translations.forBundleWithSystemRenderer(
             "gg.grounds.proxy.messages",
@@ -332,6 +350,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
         startMotd()
         startMaintenance()
+        startAnnouncements()
 
         subscribeForProxy()
 
@@ -631,12 +650,26 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
      */
     @Subscribe
     fun onServerConnected(event: ServerPostConnectEvent) {
+        event.player.currentServer.orElse(null)?.let { backend ->
+            announcementController?.completedSwitch(
+                event.player.uniqueId,
+                event.player,
+                backend.serverInfo.name,
+                backend,
+            )
+        }
+        announcementController?.refreshAll()
         tabList?.refresh(event.player)
     }
 
     @Subscribe
     fun onShutdown(event: ProxyShutdownEvent) {
         welcome?.close()
+        announcementSync?.close()
+        announcementPoll?.cancel()
+        announcementTick?.cancel()
+        announcementController?.close()
+        announcementStore?.close()
         bedrockRoster?.close()
         ProxyServiceRegistry.unregister(ProxyService::class.java)
         ProxyServiceRegistry.unregister(PlayerDisplayQuery::class.java)
@@ -655,6 +688,154 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         if (this::natsHandler.isInitialized) {
             natsHandler.close()
         }
+    }
+
+    @Subscribe
+    fun onAnnouncementDisconnect(event: DisconnectEvent) {
+        announcementController?.forget(event.player.uniqueId, event.player)
+    }
+
+    @Subscribe(order = PostOrder.LAST)
+    fun onAnnouncementPreConnect(event: ServerPreConnectEvent) {
+        if (event.result.isAllowed) {
+            announcementController?.beginSwitch(
+                event.player.uniqueId,
+                event.player,
+                event,
+                event.player.currentServer.orElse(null),
+            ) {
+                event.result.server.orElse(null)?.serverInfo?.name
+            }
+        }
+    }
+
+    @Subscribe(order = PostOrder.LAST)
+    fun onAnnouncementConnectionFailure(event: KickedFromServerEvent) {
+        if (event.kickedDuringServerConnect() && event.result is KickedFromServerEvent.Notify) {
+            val player = event.player
+            announcementController?.failedSwitch(
+                player.uniqueId,
+                player,
+                event.server.serverInfo.name,
+                player.currentServer.orElse(null),
+                player.isActive,
+            )
+            announcementController?.refreshAll()
+        }
+    }
+
+    private fun startAnnouncements() {
+        val ownership = AnnouncementOwnership.parse(System.getenv("GROUNDS_ANNOUNCEMENTS_OWNER"))
+        if (ownership == null)
+            logger.error("Invalid GROUNDS_ANNOUNCEMENTS_OWNER; announcements disabled")
+        if (ownership != AnnouncementOwnership.PROXY) return
+        val environment = System.getenv("GROUNDS_ENVIRONMENT")
+        if (environment !in setOf("stage", "prod")) {
+            logger.error("Announcements require an explicit stage/prod environment")
+            return
+        }
+        val target = resolveConfigServiceTarget() ?: return
+        val store =
+            AnnouncementConfigStore(
+                URI(if (target.contains("://")) target else "http://$target"),
+                environment!!,
+                token = {
+                    val path =
+                        Path.of(
+                            System.getenv("GROUNDS_TOKEN_FILE") ?: "/var/run/secrets/grounds/token"
+                        )
+                    if (Files.exists(path)) Files.readString(path).trim() else null
+                },
+            )
+        announcementStore = store
+        val controller =
+            AnnouncementController(
+                viewers = {
+                    proxy.allPlayers.map { player ->
+                        object : AnnouncementViewer {
+                            override val playerId
+                                get() = player.uniqueId
+
+                            override val session: Any
+                                get() = player
+
+                            override val connected
+                                get() = player.isActive
+
+                            override val serverType
+                                get() =
+                                    player.currentServer.orElse(null)?.serverInfo?.name?.let {
+                                        ProxyServiceRegistry.get(ServerDisplayQuery::class.java)
+                                            ?.displayOf(it)
+                                            ?.kind
+                                    }
+
+                            override val locale
+                                get() =
+                                    ProxyServiceRegistry.get(PlayerLocaleQuery::class.java)
+                                        ?.localeOf(player.uniqueId)
+                                        ?: player.effectiveLocale
+                                        ?: Locale.ENGLISH
+
+                            override val hudReady
+                                get() =
+                                    ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
+                                        ?.appearanceOf(player.uniqueId)
+                                        ?.ready == true
+
+                            override fun show(bar: net.kyori.adventure.bossbar.BossBar) {
+                                player.showBossBar(bar)
+                            }
+
+                            override fun hide(bar: net.kyori.adventure.bossbar.BossBar) {
+                                player.hideBossBar(bar)
+                            }
+                        }
+                    }
+                },
+                settings = { announcementSettings },
+            )
+        announcementController = controller
+        val sync =
+            AnnouncementSynchronizer(
+                store::read,
+                {
+                    announcementSettings = it
+                    controller.refreshAll()
+                },
+                {
+                    logger.warn(
+                        "Announcement refresh failed; retaining last valid snapshot ({})",
+                        it.javaClass.simpleName,
+                    )
+                },
+            )
+        announcementSync = sync
+        announcementPoll =
+            proxy.scheduler
+                .buildTask(this, Runnable { sync.refresh() })
+                .repeat(Duration.ofSeconds(15))
+                .schedule()
+        announcementTick =
+            proxy.scheduler
+                .buildTask(this, Runnable { controller.refreshAll() })
+                .repeat(Duration.ofSeconds(1))
+                .schedule()
+        crossProxySubscriptions +=
+            natsHandler.subscribe("config.velocity.$environment.changed") {
+                if (announcementQueued.compareAndSet(false, true)) {
+                    proxy.scheduler
+                        .buildTask(
+                            this,
+                            Runnable {
+                                announcementQueued.set(false)
+                                sync.refresh()
+                            },
+                        )
+                        .delay(Duration.ofMillis(250))
+                        .schedule()
+                }
+            }
     }
 
     /**
