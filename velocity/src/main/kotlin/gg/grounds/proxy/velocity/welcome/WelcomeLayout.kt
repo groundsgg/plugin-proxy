@@ -58,7 +58,8 @@ internal object WelcomeLayout {
             ';',
             'i',
             '|',
-            '¡' -> 2
+            '¡',
+            '·' -> 2
             '`',
             'l',
             'í' -> 3

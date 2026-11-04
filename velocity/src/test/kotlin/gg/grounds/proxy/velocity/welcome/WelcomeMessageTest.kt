@@ -26,8 +26,8 @@ class WelcomeMessageTest {
     fun `each welcome line is inset and shares the same visual center`() {
         val lines = plain(renderer.render("Alex", Locale.GERMAN, true, false, true)).lines()
         // Widths measured from the native Minecraft font and the active bitmap pack:
-        // wordmark 129, greeting 145, social row 169, voice 278, installation 260px.
-        val expectedInsets = mapOf(2 to 95, 4 to 87, 6 to 75, 8 to 21, 9 to 30)
+        // wordmark 129, shorter greeting 78, social row 169, compact voice row 261px.
+        val expectedInsets = mapOf(2 to 95, 4 to 121, 6 to 75, 8 to 29)
         for ((row, expected) in expectedInsets) {
             val prefix = lines[row].takeWhile { it in '\uE010'..'\uE025' }
             val inset = prefix.sumOf { 1 shl ((it.code - 0xE010) / 2) }
@@ -36,6 +36,31 @@ class WelcomeMessageTest {
         val fallback = renderer.render("Alex", Locale.GERMAN, false, true, false)
         assertTrue(plain(fallback).lines().filter(String::isNotBlank).all { it.startsWith(" ") })
         assertFalse(plain(fallback).any { it in '\uE000'..'\uF8FF' })
+    }
+
+    @Test
+    fun `bitmap welcome reserves background above and below the last icon row`() {
+        for (locale in
+            listOf(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH, Locale.forLanguageTag("es"))) {
+            for (voiceInstalled in listOf(false, true)) {
+                val text = plain(renderer.render("Alex", locale, true, voiceInstalled, true))
+                assertTrue(
+                    text.endsWith("\n"),
+                    "The final row must extend the chat background: $locale",
+                )
+                assertTrue(
+                    text.lines().size <= 10,
+                    "Padding must not push the logo out of closed chat",
+                )
+                if (voiceInstalled) {
+                    assertTrue(text.startsWith("\n\n\n"), "Give the tall logo extra room above")
+                    assertTrue(text.lines().last().isEmpty())
+                }
+            }
+        }
+        val greeting = plain(renderer.render("Alex", Locale.GERMAN, true, true, true))
+        assertTrue(greeting.contains("Willkommen, Alex!"))
+        assertFalse(greeting.contains("Grounds"), "The wordmark already names Grounds")
     }
 
     @Test
@@ -48,7 +73,7 @@ class WelcomeMessageTest {
         )
         assertTrue(plain(message).contains("\uE400 Discord   \uE401 TikTok   \uE402 Shop"))
         assertTrue(nodes(message).any { it.font() == Key.key("grounds:welcome") })
-        assertTrue(plain(message).indexOf("Grounds") < plain(message).indexOf("Discord"))
+        assertTrue(plain(message).indexOf("Alex") < plain(message).indexOf("Discord"))
         assertEquals(
             listOf(
                 "https://grnds.link/discord",

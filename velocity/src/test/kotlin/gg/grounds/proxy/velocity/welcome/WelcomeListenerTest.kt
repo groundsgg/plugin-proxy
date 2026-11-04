@@ -20,6 +20,7 @@ import java.util.Optional
 import java.util.UUID
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -95,6 +96,13 @@ class WelcomeListenerTest {
     private fun plain(client: Client) =
         client.received.joinToString { PlainTextComponentSerializer.plainText().serialize(it) }
 
+    private fun hasInstallLink(client: Client): Boolean {
+        fun linked(component: Component): Boolean =
+            component.clickEvent() == ClickEvent.openUrl(WelcomeMessage.INSTALL_URL) ||
+                component.children().any(::linked)
+        return client.received.any(::linked)
+    }
+
     private fun connect(client: Client) =
         listener.onServerConnected(ServerPostConnectEvent(client.player, null))
 
@@ -108,7 +116,7 @@ class WelcomeListenerTest {
         connect(client)
         assertEquals(1, client.received.size)
         assertEquals(1, pending.size)
-        assertTrue(plain(client).contains("install"))
+        assertTrue(hasInstallLink(client))
     }
 
     private val cookieKey = Key.key("grounds:welcome")
@@ -148,7 +156,7 @@ class WelcomeListenerTest {
         assertEquals(1, pending.size)
         pending.single().run()
         assertEquals(1, destination.received.size)
-        assertFalse(plain(destination).contains("install"))
+        assertFalse(hasInstallLink(destination))
         assertArrayEquals(byteArrayOf(1), cookies[cookieKey])
     }
 
@@ -213,7 +221,7 @@ class WelcomeListenerTest {
         connect(client)
         pending.single().run()
         assertEquals(1, client.received.size)
-        assertFalse(plain(client).contains("install"))
+        assertFalse(hasInstallLink(client))
     }
 
     @Test
@@ -231,7 +239,7 @@ class WelcomeListenerTest {
         listener.onPluginMessage(event)
         assertTrue(event.result.isAllowed)
         pending.single().run()
-        assertFalse(plain(client).contains("install"))
+        assertFalse(hasInstallLink(client))
     }
 
     @Test
@@ -248,7 +256,7 @@ class WelcomeListenerTest {
             )
         )
         pending.single().run()
-        assertTrue(plain(client).contains("install"))
+        assertTrue(hasInstallLink(client))
     }
 
     @Test
@@ -281,7 +289,7 @@ class WelcomeListenerTest {
         pending.single().run()
         pending.single().run()
         assertEquals(1, client.received.size)
-        assertTrue(plain(client).contains("install"))
+        assertTrue(hasInstallLink(client))
     }
 
     @Test

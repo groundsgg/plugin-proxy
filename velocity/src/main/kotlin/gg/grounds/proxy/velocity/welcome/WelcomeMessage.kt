@@ -53,8 +53,10 @@ internal class WelcomeMessage(
                     .color(TextColor.color(0xFFFFFF))
             else Component.text("GROUNDS", GOLD, TextDecoration.BOLD)
         val result = Component.text().font(Key.key("minecraft:default"))
-        // Reserve room around the 26px wordmark while fitting the default ten-line closed chat.
-        repeat(if (logoReady) 2 else 1) { result.appendNewline() }
+        // The tall wordmark needs two reserved rows; use a third when voice help is absent.
+        // Together with the footer this keeps every bitmap inside the chat background.
+        val leadingRows = if (logoReady) (if (voiceInstalled) 3 else 2) else 1
+        repeat(leadingRows) { result.appendNewline() }
         result.append(WelcomeLayout.center(brand, logoReady)).appendNewline()
         if (logoReady) result.appendNewline()
         result
@@ -94,16 +96,19 @@ internal class WelcomeMessage(
             result
                 .appendNewline()
                 .appendNewline()
-                .append(WelcomeLayout.center(messages.render(Copy.VOICE, locale), logoReady))
-                .appendNewline()
                 .append(
                     WelcomeLayout.center(
-                        link(messages.render(Copy.INSTALL, locale), INSTALL_URL),
+                        Component.empty()
+                            .append(messages.render(Copy.VOICE, locale))
+                            .append(Component.text(" · ", SAND))
+                            .append(link(messages.render(Copy.INSTALL, locale), INSTALL_URL)),
                         logoReady,
                     )
                 )
         }
-        return result.build()
+        // Bitmap icons extend below a normal text row, so never end the background at their
+        // baseline.
+        return result.appendNewline().build()
     }
 
     private fun communityLink(
