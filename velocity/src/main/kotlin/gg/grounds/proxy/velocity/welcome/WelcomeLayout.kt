@@ -38,6 +38,8 @@ internal object WelcomeLayout {
             (component as? TextComponent)?.content()?.sumOf { ch ->
                 when {
                     font == TabGlyphs.FONT && ch == TabGlyphs.LOGO -> TabGlyphs.LOGO_ADVANCE
+                    font == WelcomeGlyphs.FONT && ch == WelcomeGlyphs.LOGO ->
+                        WelcomeGlyphs.LOGO_ADVANCE
                     font == WelcomeGlyphs.FONT && ch == WelcomeGlyphs.SHOP -> 13
                     font == WelcomeGlyphs.FONT && ch in '\uE400'..'\uE401' -> 14
                     else -> advance(ch) + if (bold && ch != ' ') 1 else 0
@@ -62,7 +64,8 @@ internal object WelcomeLayout {
             '·' -> 2
             '`',
             'l',
-            'í' -> 3
+            'í',
+            '•' -> 3
             '"',
             '(',
             ')',

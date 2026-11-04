@@ -317,7 +317,11 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         val welcomeListener =
             WelcomeListener(
                 messages,
-                WelcomeMessage(messages, WelcomeLinks.from()),
+                WelcomeMessage(
+                    messages,
+                    WelcomeLinks.from(),
+                    decoratedLogoEnabled = WelcomeGlyphs.decoratedLogoEnabled(System.getenv()),
+                ),
                 schedule = { task -> proxy.scheduler.buildTask(this, task).schedule() },
                 logoReady = { player ->
                     ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)

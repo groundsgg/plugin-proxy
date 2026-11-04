@@ -26,8 +26,8 @@ class WelcomeMessageTest {
     fun `each welcome line is inset and shares the same visual center`() {
         val lines = plain(renderer.render("Alex", Locale.GERMAN, true, false, true)).lines()
         // Widths measured from the native Minecraft font and the active bitmap pack:
-        // wordmark 129, shorter greeting 78, social row 169, full-sentence voice row 308px.
-        val expectedInsets = mapOf(2 to 95, 4 to 121, 6 to 75, 8 to 6)
+        // wordmark 129, shorter greeting 78, social row 169, voice row with bossbar bullet 313px.
+        val expectedInsets = mapOf(2 to 95, 4 to 121, 6 to 75, 8 to 3)
         for ((row, expected) in expectedInsets) {
             val prefix = lines[row].takeWhile { it in '\uE010'..'\uE025' }
             val inset = prefix.sumOf { 1 shl ((it.code - 0xE010) / 2) }
@@ -61,6 +61,40 @@ class WelcomeMessageTest {
         val greeting = plain(renderer.render("Alex", Locale.GERMAN, true, true, true))
         assertTrue(greeting.contains("Willkommen, Alex!"))
         assertFalse(greeting.contains("Grounds"), "The wordmark already names Grounds")
+    }
+
+    @Test
+    fun `decorated logo fits with floating stones inside the chat background`() {
+        val decorated =
+            WelcomeMessage(
+                Translations.forBundle("gg.grounds.proxy.messages", javaClass.classLoader),
+                decoratedLogoEnabled = true,
+            )
+        for (locale in
+            listOf(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH, Locale.forLanguageTag("es"))) {
+            for (installed in listOf(false, true)) {
+                val message = decorated.render("Alex", locale, true, installed, true)
+                val lines = plain(message).lines()
+                assertEquals(10, lines.size)
+                assertTrue(lines[if (installed) 4 else 3].contains('\uE403'))
+                assertTrue(
+                    nodes(message).any {
+                        it.font() == Key.key("grounds:welcome") && plain(it).contains('\uE403')
+                    }
+                )
+                if (installed) assertTrue(lines.last().isEmpty())
+                else assertTrue(plain(message).contains(" • "))
+            }
+        }
+        assertFalse(
+            plain(decorated.render("Alex", Locale.GERMAN, true, true, false)).contains('\uE403')
+        )
+        assertFalse(WelcomeGlyphs.decoratedLogoEnabled(mapOf("HUD_FONT_PACK_SHA1S" to "old")))
+        assertTrue(
+            WelcomeGlyphs.decoratedLogoEnabled(
+                mapOf("HUD_FONT_PACK_SHA1S" to "new", "WELCOME_LOGO_PACK_SHA1S" to "new")
+            )
+        )
     }
 
     @Test

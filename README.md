@@ -264,3 +264,5 @@ maintenance is active. New maintenance drafts default to an empty override.
 Published on tag as `gg.grounds:plugin-proxy-api` (consume this) and `plugin-proxy-velocity`, and as `ghcr.io/groundsgg/plugin-proxy` — the image carries the shaded JAR at `/jar/plugin.jar` for the `plugin-velocity-jar` Helm chart.
 
 Welcome bitmap icons use `grounds:welcome` U+E400/U+E401/U+E402. Set `WELCOME_FONT_PACK_SHA1S` to the verified platform-pack hashes containing these glyphs and restrict `HUD_FONT_PACK_SHA1S` to that same set. Icons remain disabled unless every HUD-ready hash is covered; unknown packs show plain labels. Existing chat, sidebar and HUD pack allowlists must include a newly activated platform pack as appropriate.
+
+The welcome can use the original full Grounds logo with floating stones. Only enable WELCOME_LOGO_PACK_SHA1S for HUD-approved hashes containing U+E403; otherwise the existing compact wordmark remains. Its40px artwork reserves more rows; with Voice help the block ends in normal-height text and still fits ten closed-chat rows. Voice copy and Install use the same sand-coloured bullet as the bossbar.
