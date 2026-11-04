@@ -12,7 +12,10 @@ import java.net.InetSocketAddress
 import java.util.Locale
 import java.util.Optional
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.event.ClickEvent
+import net.kyori.adventure.text.format.TextColor
+import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -51,18 +54,18 @@ class WhereAmICommandTest {
     fun `support block has one prefix and indented rows with copyable full IDs`() {
         val proxyId = "velocity-eu-5fbc57c96d-r8pf9"
         server = "minestom-lobby-7c77bc4b6f-9zpht"
-        WhereAmICommand({ "nl-ams1" }, { proxyId }, messages)
+        WhereAmICommand({ "nl-ams1" }, { proxyId }, messages, iconsReady = { true })
             .execute(invocation(player(Locale.GERMAN)))
 
         val lines = plain().lines()
         assertEquals(6, lines.size)
-        assertTrue(lines[0].contains("Deine aktuelle Verbindung im Netzwerk."), plain())
+        assertTrue(lines[0].contains("Dein Standort im Netzwerk"), plain())
         assertTrue(lines[1].startsWith("  "), plain())
         assertTrue(lines[1].contains("Support"), plain())
         assertEquals("", lines[2])
-        assertEquals("  Region: nl-ams1", lines[3])
-        assertEquals("  Proxy: $proxyId", lines[4])
-        assertEquals("  Server: $server", lines[5])
+        assertEquals("  \uE410 Region: nl-ams1", lines[3])
+        assertEquals("  \uE411 Proxy: $proxyId", lines[4])
+        assertEquals("  \uE412 Server: $server", lines[5])
         val copies = nodes(received.single()).filter { it.clickEvent() != null }
         assertEquals(2, copies.size)
         assertEquals(ClickEvent.copyToClipboard(proxyId), copies[0].clickEvent())
@@ -75,6 +78,29 @@ class WhereAmICommandTest {
                     .contains("kopieren", ignoreCase = true)
             )
         }
+    }
+
+    @Test
+    fun `location block follows Minecraft Mini CD instead of web palette colors`() {
+        WhereAmICommand({ "nl-ams1" }, { "velocity-eu-1" }, messages, iconsReady = { true })
+            .execute(invocation(player(Locale.GERMAN)))
+
+        val content = nodes(received.single()).filterIsInstance<TextComponent>()
+        val title = content.single { it.content() == "Dein Standort im Netzwerk" }
+        assertEquals(TextDecoration.State.TRUE, title.decoration(TextDecoration.BOLD))
+        val region = content.single { it.content() == "nl-ams1" }
+        assertEquals(TextColor.color(0xF3F0EA), region.color())
+        val copies = content.filter { it.clickEvent() != null }
+        assertEquals(2, copies.size)
+        copies.forEach { assertEquals(TextColor.color(0x67D9EC), it.color()) }
+        val icons = content.filter { it.content() in listOf("\uE410", "\uE411", "\uE412") }
+        assertEquals(3, icons.size)
+        icons.forEach {
+            assertEquals(TextColor.color(0xFFFFFF), it.color())
+            assertEquals("grounds:connection", it.font()?.asString())
+        }
+        val hint = content.single { it.content().contains("Support") }
+        assertEquals(TextColor.color(0xC1B9AA), hint.color())
     }
 
     @Test
@@ -126,6 +152,29 @@ class WhereAmICommandTest {
             assertTrue(plain().contains("lobby-1"), plain())
             assertFalse(plain().contains("whereami."), plain())
         }
+    }
+
+    @Test
+    fun `unverified clients retain text labels without private glyphs`() {
+        WhereAmICommand({ "nl-ams1" }, { "velocity-eu-1" }, messages).execute(invocation(player()))
+        assertFalse(plain().any { it in '\uE000'..'\uF8FF' })
+        assertTrue(plain().lines().contains("  Region: nl-ams1"), plain())
+    }
+
+    @Test
+    fun `connection glyphs require every allowed HUD pack to contain them`() {
+        assertFalse(WhereAmIGlyphs.enabled(emptyMap()))
+        assertFalse(WhereAmIGlyphs.enabled(mapOf("HUD_FONT_PACK_SHA1S" to "old")))
+        assertFalse(
+            WhereAmIGlyphs.enabled(
+                mapOf("HUD_FONT_PACK_SHA1S" to "old,new", "WHEREAMI_FONT_PACK_SHA1S" to "new")
+            )
+        )
+        assertTrue(
+            WhereAmIGlyphs.enabled(
+                mapOf("HUD_FONT_PACK_SHA1S" to " new ", "WHEREAMI_FONT_PACK_SHA1S" to "new")
+            )
+        )
     }
 
     private fun nodes(component: Component): List<Component> =

@@ -39,6 +39,7 @@ import gg.grounds.proxy.velocity.command.ProxyCommand
 import gg.grounds.proxy.velocity.command.ProxyDebugCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
 import gg.grounds.proxy.velocity.command.WhereAmICommand
+import gg.grounds.proxy.velocity.command.WhereAmIGlyphs
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import gg.grounds.proxy.velocity.listener.LobbyCountsListener
 import gg.grounds.proxy.velocity.listener.ProxyHopListener
@@ -411,6 +412,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         proxy.commandManager.register("proxydebug", ProxyDebugCommand(messages))
 
         val proxyId = System.getenv("PROXY_ID").orEmpty()
+        val whereamiIconsEnabled = WhereAmIGlyphs.enabled(System.getenv())
         proxy.commandManager.register(
             "whereami",
             WhereAmICommand(
@@ -419,6 +421,12 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 },
                 currentProxy = { proxyId },
                 messages = messages,
+                iconsReady = { player ->
+                    whereamiIconsEnabled &&
+                        ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
+                            ?.appearanceOf(player.uniqueId)
+                            ?.ready == true
+                },
             ),
         )
         val hops =

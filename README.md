@@ -176,6 +176,11 @@ current connection on whichever proxy handles it, so backend switches appear
 immediately without a presence-service lookup. Region uses `REGION`, falling back
 to the existing `CONTINENT`/region code when the datacentre is not configured.
 All text is localized in English, German, French and Spanish.
+The heading and body follow the Minecraft Mini-CD (warm white, sand and cyan
+copy actions). Three first-party pixel icons in `grounds:connection` appear only
+with verified HUD readiness and a compatible `WHEREAMI_FONT_PACK_SHA1S` allowlist;
+otherwise the indented text labels remain. The icons use an additive platform
+pack font and do not replace vanilla fonts or the existing welcome graphics.
 
 The footer is one localized status line, for example `Lobby 2 • 42 players online • 17 ms`.
 The server number is its deterministic position among the currently registered servers of the
