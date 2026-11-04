@@ -85,7 +85,13 @@ constructor(
             .clickEvent(ClickEvent.copyToClipboard(value))
             .hoverEvent(
                 HoverEvent.showText(
-                    messages.render(ProxySystemMessage.WHEREAMI_COPY_HINT, player, "value" to value)
+                    messages
+                        .render(
+                            ProxySystemMessage.WHEREAMI_COPY_HINT,
+                            player,
+                            "value" to Component.text(value, SECONDARY),
+                        )
+                        .color(PRIMARY)
                 )
             )
     }
