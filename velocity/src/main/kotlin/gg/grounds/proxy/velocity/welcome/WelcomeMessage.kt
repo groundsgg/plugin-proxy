@@ -1,7 +1,6 @@
 package gg.grounds.proxy.velocity.welcome
 
 import gg.grounds.i18n.MessageKey
-import gg.grounds.i18n.Palette
 import gg.grounds.i18n.Translations
 import gg.grounds.proxy.velocity.tab.TabGlyphs
 import java.util.Locale
@@ -52,37 +51,57 @@ internal class WelcomeMessage(
                 Component.text(TabGlyphs.LOGO.toString())
                     .font(TabGlyphs.FONT)
                     .color(TextColor.color(0xFFFFFF))
-            else Component.text("GROUNDS", Palette.TEXT, TextDecoration.BOLD)
+            else Component.text("GROUNDS", GOLD, TextDecoration.BOLD)
         val result = Component.text().font(Key.key("minecraft:default"))
         // Reserve room around the 26px wordmark while fitting the default ten-line closed chat.
         repeat(if (logoReady) 2 else 1) { result.appendNewline() }
-        result.append(brand).appendNewline()
+        result.append(WelcomeLayout.center(brand, logoReady)).appendNewline()
         if (logoReady) result.appendNewline()
         result
-            .append(messages.render(Copy.GREETING, locale, "player" to playerName))
-            .appendNewline()
-            .appendNewline()
             .append(
-                communityLink(
-                    WelcomeGlyphs.DISCORD,
-                    "Discord",
-                    links.discord,
-                    iconsReady && logoReady,
+                WelcomeLayout.center(
+                    messages.render(Copy.GREETING, locale, "player" to playerName),
+                    logoReady,
                 )
             )
-            .append(Component.text("   "))
-            .append(
-                communityLink(WelcomeGlyphs.TIKTOK, "TikTok", links.tiktok, iconsReady && logoReady)
-            )
-            .append(Component.text("   "))
-            .append(communityLink(WelcomeGlyphs.SHOP, "Shop", links.shop, iconsReady && logoReady))
+            .appendNewline()
+            .appendNewline()
+        val community =
+            Component.empty()
+                .append(
+                    communityLink(
+                        WelcomeGlyphs.DISCORD,
+                        "Discord",
+                        links.discord,
+                        iconsReady && logoReady,
+                    )
+                )
+                .append(Component.text("   "))
+                .append(
+                    communityLink(
+                        WelcomeGlyphs.TIKTOK,
+                        "TikTok",
+                        links.tiktok,
+                        iconsReady && logoReady,
+                    )
+                )
+                .append(Component.text("   "))
+                .append(
+                    communityLink(WelcomeGlyphs.SHOP, "Shop", links.shop, iconsReady && logoReady)
+                )
+        result.append(WelcomeLayout.center(community, logoReady))
         if (!voiceInstalled) {
             result
                 .appendNewline()
                 .appendNewline()
-                .append(messages.render(Copy.VOICE, locale))
+                .append(WelcomeLayout.center(messages.render(Copy.VOICE, locale), logoReady))
                 .appendNewline()
-                .append(link(messages.render(Copy.INSTALL, locale), INSTALL_URL))
+                .append(
+                    WelcomeLayout.center(
+                        link(messages.render(Copy.INSTALL, locale), INSTALL_URL),
+                        logoReady,
+                    )
+                )
         }
         return result.build()
     }
@@ -102,15 +121,16 @@ internal class WelcomeMessage(
                 )
                 .append(Component.space())
         }
-        return link(row.append(Component.text(label, Palette.ACCENT)).build(), url)
+        return link(row.append(Component.text(label, GOLD)).build(), url)
     }
 
     private fun link(label: Component, url: String): Component =
-        label
-            .clickEvent(ClickEvent.openUrl(url))
-            .hoverEvent(Component.text(url, Palette.TEXT_MUTED))
+        label.clickEvent(ClickEvent.openUrl(url)).hoverEvent(Component.text(url, SAND))
 
     companion object {
+        // Minecraft Mini-CD: gold.primary and text.secondary, not the web UI palette.
+        private val GOLD = TextColor.color(0xE7B84B)
+        private val SAND = TextColor.color(0xC1B9AA)
         const val INSTALL_URL = "https://modrepo.de/minecraft/voicechat/wiki/installation"
     }
 }

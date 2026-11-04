@@ -23,6 +23,22 @@ class WelcomeMessageTest {
         PlainTextComponentSerializer.plainText().serialize(component)
 
     @Test
+    fun `each welcome line is inset and shares the same visual center`() {
+        val lines = plain(renderer.render("Alex", Locale.GERMAN, true, false, true)).lines()
+        // Widths measured from the native Minecraft font and the active bitmap pack:
+        // wordmark 129, greeting 145, social row 169, voice 278, installation 260px.
+        val expectedInsets = mapOf(2 to 95, 4 to 87, 6 to 75, 8 to 21, 9 to 30)
+        for ((row, expected) in expectedInsets) {
+            val prefix = lines[row].takeWhile { it in '\uE010'..'\uE025' }
+            val inset = prefix.sumOf { 1 shl ((it.code - 0xE010) / 2) }
+            assertEquals(expected, inset, "Row $row should be centered without touching the edge")
+        }
+        val fallback = renderer.render("Alex", Locale.GERMAN, false, true, false)
+        assertTrue(plain(fallback).lines().filter(String::isNotBlank).all { it.startsWith(" ") })
+        assertFalse(plain(fallback).any { it in '\uE000'..'\uF8FF' })
+    }
+
+    @Test
     fun `links below the brand have independent click targets`() {
         val message = renderer.render("Alex", Locale.ENGLISH, true, true, true)
         val clickable = nodes(message).filter { url(it) != null }
