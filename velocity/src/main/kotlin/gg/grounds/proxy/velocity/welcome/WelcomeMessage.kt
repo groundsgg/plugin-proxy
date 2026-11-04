@@ -100,7 +100,7 @@ internal class WelcomeMessage(
                     WelcomeLayout.center(
                         Component.empty()
                             .append(messages.render(Copy.VOICE, locale))
-                            .append(Component.text(" · ", SAND))
+                            .append(Component.space())
                             .append(link(messages.render(Copy.INSTALL, locale), INSTALL_URL)),
                         logoReady,
                     )

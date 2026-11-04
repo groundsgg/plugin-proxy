@@ -318,12 +318,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
             WelcomeListener(
                 messages,
                 WelcomeMessage(messages, WelcomeLinks.from()),
-                schedule = { task ->
-                    proxy.scheduler
-                        .buildTask(this, task)
-                        .delay(WelcomeListener.DELAY_SECONDS, TimeUnit.SECONDS)
-                        .schedule()
-                },
+                schedule = { task -> proxy.scheduler.buildTask(this, task).schedule() },
                 logoReady = { player ->
                     ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
                         ?.appearanceOf(player.uniqueId)
@@ -334,6 +329,12 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                         ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
                             ?.appearanceOf(player.uniqueId)
                             ?.ready == true
+                },
+                legacySchedule = { task ->
+                    proxy.scheduler
+                        .buildTask(this, task)
+                        .delay(WelcomeListener.LEGACY_GRACE_SECONDS, TimeUnit.SECONDS)
+                        .schedule()
                 },
             )
         welcome = welcomeListener

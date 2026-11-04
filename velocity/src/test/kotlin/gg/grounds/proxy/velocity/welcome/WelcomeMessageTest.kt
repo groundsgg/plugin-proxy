@@ -26,8 +26,8 @@ class WelcomeMessageTest {
     fun `each welcome line is inset and shares the same visual center`() {
         val lines = plain(renderer.render("Alex", Locale.GERMAN, true, false, true)).lines()
         // Widths measured from the native Minecraft font and the active bitmap pack:
-        // wordmark 129, shorter greeting 78, social row 169, compact voice row 261px.
-        val expectedInsets = mapOf(2 to 95, 4 to 121, 6 to 75, 8 to 29)
+        // wordmark 129, shorter greeting 78, social row 169, full-sentence voice row 308px.
+        val expectedInsets = mapOf(2 to 95, 4 to 121, 6 to 75, 8 to 6)
         for ((row, expected) in expectedInsets) {
             val prefix = lines[row].takeWhile { it in '\uE010'..'\uE025' }
             val inset = prefix.sumOf { 1 shl ((it.code - 0xE010) / 2) }

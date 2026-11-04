@@ -1,5 +1,6 @@
 package gg.grounds.proxy.velocity.welcome
 
+import com.velocitypowered.api.event.EventTask
 import com.velocitypowered.api.event.PostOrder
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
@@ -25,6 +26,7 @@ internal class WelcomeListener(
     private val schedule: (Runnable) -> ScheduledTask,
     private val logoReady: (Player) -> Boolean,
     private val iconsReady: (Player) -> Boolean = { false },
+    private val legacySchedule: (Runnable) -> ScheduledTask = schedule,
 ) : AutoCloseable {
     // Connection objects prevent a delayed task or old disconnect from affecting a reconnect.
     private val sessions = ConcurrentHashMap<Player, Join>()
@@ -34,6 +36,8 @@ internal class WelcomeListener(
         var voiceInstalled = false
         var welcomed: Boolean? = if (transfer) null else false
         var cookieRequested = false
+        var readyRequested = false
+        var clientReady = false
         var connected = false
         var scheduled = false
         var sent = false
@@ -64,30 +68,44 @@ internal class WelcomeListener(
 
     @Subscribe
     fun onCookie(event: CookieReceiveEvent) {
-        if (event.originalKey != COOKIE_KEY) return
+        if (event.originalKey != COOKIE_KEY && event.originalKey != READY_KEY) return
         val player = event.player
         val join = sessions[player] ?: return
         synchronized(join) {
-            if (closed || sessions[player] !== join || !join.cookieRequested) return
+            if (closed || sessions[player] !== join) return
+            if (event.originalKey == READY_KEY) {
+                if (!join.readyRequested) return
+                join.readyRequested = false
+                join.clientReady = true
+            } else {
+                if (!join.cookieRequested) return
+                join.cookieRequested = false
+                join.welcomed = event.originalData?.contentEquals(byteArrayOf(1)) == true
+            }
             event.result = CookieReceiveEvent.ForwardResult.handled()
-            join.cookieRequested = false
-            join.welcomed = event.originalData?.contentEquals(byteArrayOf(1)) == true
             scheduleIfNeeded(player, join)
         }
     }
 
-    @Subscribe
-    fun onChannels(event: PlayerChannelRegisterEvent) {
+    @Subscribe(priority = Short.MAX_VALUE, async = false)
+    fun onChannels(event: PlayerChannelRegisterEvent): EventTask {
         if (event.channels.any { it.id.startsWith("voicechat:") }) markInstalled(event.player)
+        return continueAsync()
     }
 
-    @Subscribe(order = PostOrder.LAST)
-    fun onPluginMessage(event: PluginMessageEvent) {
-        if (event.identifier.id != VOICE_CHANNEL || event.data.size != 4) return
-        val player = event.source as? Player ?: return
-        markInstalled(player)
+    // Observe on the packet thread before async handlers can let a later cookie reply overtake us.
+    @Subscribe(priority = Short.MAX_VALUE, async = false)
+    fun onPluginMessage(event: PluginMessageEvent): EventTask {
+        if (event.identifier.id == VOICE_CHANNEL && event.data.size == 4) {
+            (event.source as? Player)?.let(::markInstalled)
+        }
         // Leave the result unchanged: the backend must receive the original handshake.
+        return continueAsync()
     }
+
+    // Velocity continues later void handlers on our current thread unless we explicitly hand off.
+    // Capture only the installation bit synchronously; preserve async execution for other plugins.
+    private fun continueAsync(): EventTask = EventTask.async {}
 
     private fun markInstalled(player: Player) {
         if (closed) return
@@ -116,8 +134,20 @@ internal class WelcomeListener(
                 join.scheduled
         )
             return
+        if (player.protocolVersion >= ProtocolVersion.MINECRAFT_1_20_5 && !join.clientReady) {
+            if (!join.readyRequested) {
+                join.readyRequested = true
+                // Queued after JoinGame: the client processes join-time mod announcements before
+                // replying on its main thread. Unlike a timer this costs only a network round trip.
+                player.requestCookie(READY_KEY)
+            }
+            return
+        }
         join.scheduled = true
-        join.task = schedule(Runnable { deliver(player, join) })
+        val scheduler =
+            if (player.protocolVersion >= ProtocolVersion.MINECRAFT_1_20_5) schedule
+            else legacySchedule
+        join.task = scheduler(Runnable { deliver(player, join) })
     }
 
     private fun deliver(player: Player, join: Join) {
@@ -155,7 +185,8 @@ internal class WelcomeListener(
 
     companion object {
         private val COOKIE_KEY = Key.key("grounds:welcome")
+        private val READY_KEY = Key.key("grounds:welcome_ready")
         const val VOICE_CHANNEL = "voicechat:request_secret"
-        const val DELAY_SECONDS = 5L
+        const val LEGACY_GRACE_SECONDS = 5L
     }
 }

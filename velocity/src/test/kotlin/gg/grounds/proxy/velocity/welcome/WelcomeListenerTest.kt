@@ -29,6 +29,7 @@ class WelcomeListenerTest {
     private val pending = mutableListOf<Runnable>()
     private var cancelled = 0
     private var ready = false
+    private var legacyScheduled = 0
     private val messages =
         Translations.forBundle("gg.grounds.proxy.messages", javaClass.classLoader)
     private val listener = newListener()
@@ -37,20 +38,21 @@ class WelcomeListenerTest {
         WelcomeListener(
             messages,
             WelcomeMessage(messages),
-            schedule = { work ->
-                pending += work
-                fake(ScheduledTask::class.java) { name, _ ->
-                    when (name) {
-                        "cancel" -> {
-                            cancelled++
-                            null
-                        }
-                        else -> null
-                    }
-                }
-            },
+            schedule = ::queue,
             logoReady = { ready },
+            legacySchedule = { work ->
+                legacyScheduled++
+                queue(work)
+            },
         )
+
+    private fun queue(work: Runnable): ScheduledTask {
+        pending += work
+        return fake(ScheduledTask::class.java) { name, _ ->
+            if (name == "cancel") cancelled++
+            null
+        }
+    }
 
     private class Client(
         val player: Player,
@@ -63,6 +65,7 @@ class WelcomeListenerTest {
         intent: HandshakeIntent = HandshakeIntent.LOGIN,
         id: UUID = UUID.randomUUID(),
         cookies: MutableMap<Key, ByteArray> = mutableMapOf(),
+        protocol: ProtocolVersion = ProtocolVersion.MINECRAFT_1_21,
     ): Client {
         val received = mutableListOf<Component>()
         val requested = mutableListOf<Key>()
@@ -72,7 +75,7 @@ class WelcomeListenerTest {
                     "getUniqueId" -> id
                     "getUsername" -> "Alex"
                     "getHandshakeIntent" -> intent
-                    "getProtocolVersion" -> ProtocolVersion.MINECRAFT_1_21
+                    "getProtocolVersion" -> protocol
                     "storeCookie" -> {
                         cookies[args!![0] as Key] = (args[1] as ByteArray).copyOf()
                         null
@@ -103,8 +106,99 @@ class WelcomeListenerTest {
         return client.received.any(::linked)
     }
 
-    private fun connect(client: Client) =
+    private val readyCookieKey = Key.key("grounds:welcome_ready")
+
+    private fun acknowledgeReady(client: Client, proxy: WelcomeListener = listener) {
+        proxy.onCookie(CookieReceiveEvent(client.player, readyCookieKey, null))
+    }
+
+    private fun connect(client: Client) {
         listener.onServerConnected(ServerPostConnectEvent(client.player, null))
+        acknowledgeReady(client)
+    }
+
+    @Test
+    fun `a fresh join needs only a play cookie reply before immediate scheduling`() {
+        val client = client()
+        listener.onLogin(PostLoginEvent(client.player))
+        listener.onServerConnected(ServerPostConnectEvent(client.player, null))
+        assertEquals(listOf(readyCookieKey), client.requested)
+        assertEquals(0, legacyScheduled)
+        assertTrue(pending.isEmpty(), "Do not infer a missing mod before the client processes join")
+        listener.onChannels(
+            PlayerChannelRegisterEvent(
+                client.player,
+                listOf(MinecraftChannelIdentifier.from("voicechat:secret")),
+            )
+        )
+        acknowledgeReady(client)
+        assertEquals(1, pending.size)
+        pending.single().run()
+        assertEquals(1, client.received.size)
+        assertFalse(hasInstallLink(client))
+    }
+
+    @Test
+    fun `a late login cookie reply cannot stand in for the play acknowledgement`() {
+        val client = client(HandshakeIntent.TRANSFER)
+        listener.onLogin(PostLoginEvent(client.player))
+        listener.onServerConnected(ServerPostConnectEvent(client.player, null))
+        acknowledgeReady(client)
+        assertEquals(listOf(cookieKey), client.requested)
+        assertTrue(pending.isEmpty())
+        listener.onCookie(CookieReceiveEvent(client.player, cookieKey, byteArrayOf(0)))
+        assertEquals(listOf(cookieKey, readyCookieKey), client.requested)
+        assertTrue(pending.isEmpty())
+        acknowledgeReady(client)
+        assertEquals(1, pending.size)
+    }
+
+    @Test
+    fun `legacy clients retain negotiation grace without unsupported cookies`() {
+        val client = client(protocol = ProtocolVersion.MINECRAFT_1_20_3)
+        listener.onServerConnected(ServerPostConnectEvent(client.player, null))
+        assertTrue(client.requested.isEmpty())
+        assertEquals(1, legacyScheduled)
+        listener.onChannels(
+            PlayerChannelRegisterEvent(
+                client.player,
+                listOf(MinecraftChannelIdentifier.from("voicechat:secret")),
+            )
+        )
+        pending.single().run()
+        assertFalse(hasInstallLink(client))
+    }
+
+    @Test
+    fun `duplicate ready replies and reconnect events cannot schedule twice`() {
+        val client = client()
+        connect(client)
+        acknowledgeReady(client)
+        listener.onServerConnected(ServerPostConnectEvent(client.player, null))
+        acknowledgeReady(client)
+        assertEquals(listOf(readyCookieKey), client.requested)
+        assertEquals(1, pending.size)
+        pending.single().run()
+        assertEquals(1, client.received.size)
+    }
+
+    @Test
+    fun `unsolicited or stale ready replies cannot release another connection`() {
+        val id = UUID.randomUUID()
+        val old = client(id = id)
+        acknowledgeReady(old)
+        assertTrue(pending.isEmpty())
+        listener.onServerConnected(ServerPostConnectEvent(old.player, null))
+        listener.onDisconnect(
+            DisconnectEvent(old.player, DisconnectEvent.LoginStatus.SUCCESSFUL_LOGIN)
+        )
+        val current = client(id = id)
+        listener.onServerConnected(ServerPostConnectEvent(current.player, null))
+        acknowledgeReady(old)
+        assertTrue(pending.isEmpty())
+        acknowledgeReady(current)
+        assertEquals(1, pending.size)
+    }
 
     @Test
     fun `backend reconnect events cannot schedule a second welcome`() {
@@ -153,6 +247,7 @@ class WelcomeListenerTest {
             )
         )
         otherProxy.onServerConnected(ServerPostConnectEvent(destination.player, null))
+        acknowledgeReady(destination, otherProxy)
         assertEquals(1, pending.size)
         pending.single().run()
         assertEquals(1, destination.received.size)
@@ -174,6 +269,7 @@ class WelcomeListenerTest {
         otherProxy.onLogin(PostLoginEvent(destination.player))
         otherProxy.onServerConnected(ServerPostConnectEvent(destination.player, null))
         otherProxy.onCookie(CookieReceiveEvent(destination.player, cookieKey, cookies[cookieKey]))
+        acknowledgeReady(destination, otherProxy)
         assertEquals(2, pending.size)
         pending.forEach(Runnable::run)
         assertTrue(source.received.isEmpty())
@@ -196,6 +292,7 @@ class WelcomeListenerTest {
         val response = CookieReceiveEvent(current.player, cookieKey, null)
         listener.onCookie(response)
         assertFalse(response.result.isAllowed)
+        acknowledgeReady(current)
         assertEquals(1, pending.size)
         pending.single().run()
         assertEquals(1, current.received.size)

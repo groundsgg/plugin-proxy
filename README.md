@@ -26,9 +26,11 @@ A fresh network join receives a single welcome block with the large 26px Grounds
 wordmark used by the network HUD, the player's name, and independent Discord,
 TikTok and Shop links in one horizontal row. The resource pack supplies sharp
 pixel-art brand icons (Discord, TikTok and a shopping bag); both icon and label
-open the link. Delivery waits
-five seconds after the first backend connection so client mod negotiation and
-resource-pack loading can finish. Clients without a verified HUD font pack see the
+open the link. Modern clients receive it after the first backend connection and
+one acknowledgement round trip, with no fixed welcome delay. Required packs have
+already loaded during configuration. A `grounds:welcome_ready` cookie request is
+queued after JoinGame so client join-time mod announcements precede its response.
+Clients without a verified HUD font pack see the
 Grounds name instead of an unsupported glyph.
 
 Discord defaults to `https://grnds.link/discord`, matching the lobby bossbar.
@@ -38,7 +40,8 @@ with `WELCOME_TIKTOK_URL` and `WELCOME_SHOP_URL`; `WELCOME_DISCORD_URL` can over
 Discord as well. Keep these values consistent across proxy deployments.
 
 Clients that have not announced Simple Voice Chat receive a short description
-and a link to the official installation guide. Client channel registration or a
+and a link to the official installation guide, as a complete localized sentence
+followed by the installation action. Client channel registration or a
 voice handshake suppresses that section even if voice is disabled or UDP cannot
 connect. Handshake messages continue to the backend unchanged. Server switches
 do not repeat the welcome. A connection-scoped `grounds:welcome` client cookie
@@ -50,7 +53,19 @@ pending delivery.
 Before rollout, check a fresh join on each proxy, a backend switch, and a proxy
 transfer. Check clients with the mod absent, present but disabled, and present
 with UDP blocked; only the first should get installation help. Also check a
-declined resource pack and a disconnect/reconnect during the five-second delay.
+declined resource pack and a disconnect/reconnect before the ready-cookie reply.
+Only legacy protocols before 1.20.5 retain the old five-second negotiation grace.
+
+The installation observers capture only an in-memory bit at maximum synchronous
+priority, then explicitly hand off to an asynchronous EventTask. This preserves
+packet order before the ready reply without moving other plugins' handlers onto
+the packet thread. Before changing the Velocity runtime, verify these dispatcher
+semantics against its actual JAR:
+
+```sh
+velocity/src/test/scripts/verify-welcome-dispatch.sh \
+  velocity/build/libs/plugin-proxy-velocity.jar /path/to/deployed-velocity.jar
+```
 
 ## How the pieces fit
 
