@@ -20,6 +20,7 @@ import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
 import gg.grounds.presentation.VelocitySystemMessages
 import gg.grounds.proxy.api.NetworkPlayerCounts
+import gg.grounds.proxy.api.PlayerChatAppearanceQuery
 import gg.grounds.proxy.api.PlayerDisplayQuery
 import gg.grounds.proxy.api.PlayerMessageRenderers
 import gg.grounds.proxy.api.PlayerRoleQuery
@@ -50,6 +51,9 @@ import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
 import gg.grounds.proxy.velocity.tab.TabParties
 import gg.grounds.proxy.velocity.tab.VoicePresences
+import gg.grounds.proxy.velocity.welcome.WelcomeLinks
+import gg.grounds.proxy.velocity.welcome.WelcomeListener
+import gg.grounds.proxy.velocity.welcome.WelcomeMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.nats.client.Subscription
 import java.time.Duration
@@ -216,6 +220,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private var countSubscription: Subscription? = null
     private var metrics: ProxyMetrics? = null
     private var tabList: TabList? = null
+    private var welcome: WelcomeListener? = null
     private var bedrockRoster: BedrockRoster? = null
     private val tabParties = TabParties()
     private val voicePresences = VoicePresences()
@@ -289,6 +294,28 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         val lobbyIdentifier = MinecraftChannelIdentifier.from(LobbyCountsListener.CHANNEL_ID)
         proxy.channelRegistrar.register(lobbyIdentifier)
         proxy.eventManager.register(this, LobbyCountsListener(lobbyIdentifier, service, logger))
+
+        val welcomeListener =
+            WelcomeListener(
+                messages,
+                WelcomeMessage(messages, WelcomeLinks.from()),
+                schedule = { task ->
+                    proxy.scheduler
+                        .buildTask(this, task)
+                        .delay(WelcomeListener.DELAY_SECONDS, TimeUnit.SECONDS)
+                        .schedule()
+                },
+                logoReady = { player ->
+                    ProxyServiceRegistry.get(PlayerChatAppearanceQuery::class.java)
+                        ?.appearanceOf(player.uniqueId)
+                        ?.chatFontReady == true
+                },
+            )
+        welcome = welcomeListener
+        proxy.channelRegistrar.register(
+            MinecraftChannelIdentifier.from(WelcomeListener.VOICE_CHANNEL)
+        )
+        proxy.eventManager.register(this, welcomeListener)
 
         // The network-wide player count, pushed every few seconds. Subscribed once for the whole
         // proxy rather than per player: it is a property of the network, not of anybody's session.
@@ -609,6 +636,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
     @Subscribe
     fun onShutdown(event: ProxyShutdownEvent) {
+        welcome?.close()
         bedrockRoster?.close()
         ProxyServiceRegistry.unregister(ProxyService::class.java)
         ProxyServiceRegistry.unregister(PlayerDisplayQuery::class.java)

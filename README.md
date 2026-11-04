@@ -20,6 +20,35 @@ A Velocity proxy only knows its own players. Ask it for `dahendriik` while they 
 
 Local first, always — a player on this proxy is already in memory and costs nothing to find.
 
+## Join welcome
+
+A fresh network join receives a single welcome block with the Grounds chat logo,
+the player's name, and independent Discord, TikTok and Shop links. Delivery waits
+five seconds after the first backend connection so client mod negotiation and
+resource-pack loading can finish. Clients without a verified chat font see the
+Grounds name instead of an unsupported glyph.
+
+Discord defaults to `https://grnds.link/discord`, matching the lobby bossbar.
+TikTok (`https://example.com/grounds/tiktok`) and Shop
+(`https://example.com/grounds/shop`) are intentional placeholders. Replace these
+with `WELCOME_TIKTOK_URL` and `WELCOME_SHOP_URL`; `WELCOME_DISCORD_URL` can override
+Discord as well. Keep these values consistent across proxy deployments.
+
+Clients that have not announced Simple Voice Chat receive a short description
+and a link to the official installation guide. Client channel registration or a
+voice handshake suppresses that section even if voice is disabled or UDP cannot
+connect. Handshake messages continue to the backend unchanged. Server switches
+do not repeat the welcome. A connection-scoped `grounds:welcome` client cookie
+carries whether the block was delivered across proxy/region transfers: an early
+redirect still gets its first welcome at the destination. Fresh logins reset
+the marker before preferred-region routing. Disconnect and shutdown cancel
+pending delivery.
+
+Before rollout, check a fresh join on each proxy, a backend switch, and a proxy
+transfer. Check clients with the mod absent, present but disabled, and present
+with UDP blocked; only the first should get installation help. Also check a
+declined resource pack and a disconnect/reconnect during the five-second delay.
+
 ## How the pieces fit
 
 ```
