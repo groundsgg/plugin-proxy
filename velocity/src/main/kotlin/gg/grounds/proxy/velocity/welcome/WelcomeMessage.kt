@@ -28,9 +28,12 @@ internal data class WelcomeLinks(
 }
 
 /** One branded block: every link owns its click event, so it cannot leak onto the next line. */
-internal class WelcomeMessage(
+internal class WelcomeMessage
+@JvmOverloads
+constructor(
     private val messages: Translations,
     private val links: WelcomeLinks = WelcomeLinks(),
+    private val decoratedLogoEnabled: Boolean = false,
 ) {
     private enum class Copy(override val id: String) : MessageKey {
         GREETING("welcome.greeting"),
@@ -46,8 +49,13 @@ internal class WelcomeMessage(
         voiceInstalled: Boolean,
         iconsReady: Boolean = false,
     ): Component {
+        val decoratedLogo = decoratedLogoEnabled && logoReady && iconsReady
         val brand =
-            if (logoReady)
+            if (decoratedLogo)
+                Component.text(WelcomeGlyphs.LOGO.toString())
+                    .font(WelcomeGlyphs.FONT)
+                    .color(TextColor.color(0xFFFFFF))
+            else if (logoReady)
                 Component.text(TabGlyphs.LOGO.toString())
                     .font(TabGlyphs.FONT)
                     .color(TextColor.color(0xFFFFFF))
@@ -55,7 +63,12 @@ internal class WelcomeMessage(
         val result = Component.text().font(Key.key("minecraft:default"))
         // The tall wordmark needs two reserved rows; use a third when voice help is absent.
         // Together with the footer this keeps every bitmap inside the chat background.
-        val leadingRows = if (logoReady) (if (voiceInstalled) 3 else 2) else 1
+        val leadingRows =
+            when {
+                decoratedLogo -> if (voiceInstalled) 4 else 3
+                logoReady -> if (voiceInstalled) 3 else 2
+                else -> 1
+            }
         repeat(leadingRows) { result.appendNewline() }
         result.append(WelcomeLayout.center(brand, logoReady)).appendNewline()
         if (logoReady) result.appendNewline()
@@ -100,7 +113,7 @@ internal class WelcomeMessage(
                     WelcomeLayout.center(
                         Component.empty()
                             .append(messages.render(Copy.VOICE, locale))
-                            .append(Component.space())
+                            .append(Component.text(" • ", SAND))
                             .append(link(messages.render(Copy.INSTALL, locale), INSTALL_URL)),
                         logoReady,
                     )
@@ -108,7 +121,10 @@ internal class WelcomeMessage(
         }
         // Bitmap icons extend below a normal text row, so never end the background at their
         // baseline.
-        return result.appendNewline().build()
+        // The taller decorated logo uses the full ten rows with voice help. That variant ends in
+        // normal-height text; the icon row already has a blank row below it.
+        return if (decoratedLogo && !voiceInstalled) result.build()
+        else result.appendNewline().build()
     }
 
     private fun communityLink(
