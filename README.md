@@ -168,6 +168,15 @@ allowed can still _show_ the MOTD; `/motd set` then reports the refusal instead 
 
 ## Tab footer and diagnostics
 
+`/whereami` is available to every player and shows their current region, full proxy
+ID and current backend ID in one indented Grounds chat block. A short explanation
+asks players to use these details when contacting support. Hover and click the
+proxy or server ID to copy it. Missing values appear as `—`. The command reads the
+current connection on whichever proxy handles it, so backend switches appear
+immediately without a presence-service lookup. Region uses `REGION`, falling back
+to the existing `CONTINENT`/region code when the datacentre is not configured.
+All text is localized in English, German, French and Spanish.
+
 The footer is one localized status line, for example `Lobby 2 • 42 players online • 17 ms`.
 The server number is its deterministic position among the currently registered servers of the
 same kind, not a pod identifier. All proxies with the same discovery inventory show the same

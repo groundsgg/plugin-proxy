@@ -38,6 +38,7 @@ import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.ProxyCommand
 import gg.grounds.proxy.velocity.command.ProxyDebugCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
+import gg.grounds.proxy.velocity.command.WhereAmICommand
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import gg.grounds.proxy.velocity.listener.LobbyCountsListener
 import gg.grounds.proxy.velocity.listener.ProxyHopListener
@@ -410,6 +411,16 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         proxy.commandManager.register("proxydebug", ProxyDebugCommand(messages))
 
         val proxyId = System.getenv("PROXY_ID").orEmpty()
+        proxy.commandManager.register(
+            "whereami",
+            WhereAmICommand(
+                currentRegion = {
+                    System.getenv("REGION")?.trim()?.takeIf(String::isNotEmpty) ?: region()
+                },
+                currentProxy = { proxyId },
+                messages = messages,
+            ),
+        )
         val hops =
             ProxyHopListener(
                 this,
