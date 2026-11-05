@@ -37,7 +37,6 @@ constructor(
 ) {
     private enum class Copy(override val id: String) : MessageKey {
         GREETING("welcome.greeting"),
-        COMPACT_GREETING("welcome.greeting.compact"),
         VOICE("welcome.voice"),
         INSTALL("welcome.install"),
     }
@@ -63,7 +62,7 @@ constructor(
             else Component.text("GROUNDS", GOLD, TextDecoration.BOLD)
         val result = Component.text().font(Key.key("minecraft:default"))
         // At height56/ascent50, row5 starts the mosaic at y2 and ends at y58.
-        // The compact social row7 starts its icons at y59, avoiding overlap.
+        // The compact social row7 starts its icons at y58, avoiding overlap.
         val leadingRows =
             when {
                 decoratedLogo -> if (voiceInstalled) 6 else 5
@@ -84,6 +83,7 @@ constructor(
                 .appendNewline()
                 .appendNewline()
         }
+        val communityGap = Component.text(if (decoratedLogo) " " else "   ")
         val community =
             Component.empty()
                 .append(
@@ -94,7 +94,7 @@ constructor(
                         iconsReady && logoReady,
                     )
                 )
-                .append(Component.text("   "))
+                .append(communityGap)
                 .append(
                     communityLink(
                         WelcomeGlyphs.TIKTOK,
@@ -103,38 +103,35 @@ constructor(
                         iconsReady && logoReady,
                     )
                 )
-                .append(Component.text("   "))
+                .append(communityGap)
                 .append(
                     communityLink(WelcomeGlyphs.SHOP, "Shop", links.shop, iconsReady && logoReady)
                 )
         val communityRow =
             if (decoratedLogo)
                 Component.empty()
-                    .append(messages.render(Copy.COMPACT_GREETING, locale))
-                    .append(Component.text("  "))
+                    .append(messages.render(Copy.GREETING, locale, "player" to playerName))
+                    .append(Component.space())
                     .append(community)
             else community
         result.append(WelcomeLayout.center(communityRow, logoReady))
         if (!voiceInstalled) {
-            result
-                .appendNewline()
-                .appendNewline()
-                .append(
-                    WelcomeLayout.center(
-                        Component.empty()
-                            .append(messages.render(Copy.VOICE, locale))
-                            .append(Component.text(" • ", SAND))
-                            .append(link(messages.render(Copy.INSTALL, locale), INSTALL_URL)),
-                        logoReady,
-                    )
+            result.appendNewline()
+            // The compact pack aligns the full icon bitmap above the following normal text row;
+            // reserve the spare row below the copy.
+            if (!decoratedLogo) result.appendNewline()
+            result.append(
+                WelcomeLayout.center(
+                    Component.empty()
+                        .append(messages.render(Copy.VOICE, locale))
+                        .append(Component.text(" • ", SAND))
+                        .append(link(messages.render(Copy.INSTALL, locale), INSTALL_URL)),
+                    logoReady,
                 )
+            )
         }
-        // Bitmap icons extend below a normal text row, so never end the background at their
-        // baseline.
-        // The taller decorated logo uses the full ten rows with voice help. That variant ends in
-        // normal-height text; the icon row already has a blank row below it.
-        return if (decoratedLogo && !voiceInstalled) result.build()
-        else result.appendNewline().build()
+        // Always retain background below the last sentence or bitmap icon row.
+        return result.appendNewline().build()
     }
 
     private fun communityLink(

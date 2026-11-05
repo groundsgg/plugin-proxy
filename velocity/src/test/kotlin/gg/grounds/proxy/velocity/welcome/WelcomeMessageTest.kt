@@ -80,13 +80,18 @@ class WelcomeMessageTest {
                 val linksRow = if (installed) 8 else 7
                 assertTrue(lines[brandRow].contains("\uE403\uE405\uE404"))
                 assertTrue(lines[linksRow].contains("Discord"))
-                assertFalse(
-                    plain(message).contains("Alex"),
-                    "Compact greeting leaves room for links",
-                )
+                assertTrue(lines.last().isEmpty(), "Reserve a blank row below the final sentence")
+                assertTrue(lines[linksRow].contains("Alex"), "Keep the personalized greeting")
+                if (!installed) {
+                    assertTrue(lines[8].contains(" • "), "Voice copy follows the social row")
+                    assertTrue(
+                        iconsTopForRow(linksRow) + 14 <= 8 * 9,
+                        "The full icon bitmap ends before adjacent voice text",
+                    )
+                }
                 val logoTop = brandRow * 9 + 7 - 50
                 val logoBottom = logoTop + 56
-                val iconsTop = linksRow * 9 + 7 - 11
+                val iconsTop = linksRow * 9 + 7 - 12
                 assertTrue(logoTop >= 0)
                 assertTrue(logoBottom <= iconsTop, "Logo must not overlap social icons")
                 assertTrue(iconsTop + 14 <= 90, "Icons must remain inside chat background")
@@ -110,6 +115,33 @@ class WelcomeMessageTest {
                 mapOf("HUD_FONT_PACK_SHA1S" to "new", "WELCOME_LOGO_PACK_SHA1S" to "new")
             )
         )
+    }
+
+    private fun iconsTopForRow(row: Int) = row * 9 + 7 - 12
+
+    @Test
+    fun `personalized compact greeting fits maximum width names in every locale`() {
+        val decorated =
+            WelcomeMessage(
+                Translations.forBundle("gg.grounds.proxy.messages", javaClass.classLoader),
+                decoratedLogoEnabled = true,
+            )
+        val name = "W".repeat(16)
+        for (locale in
+            listOf(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH, Locale.forLanguageTag("es"))) {
+            for (installed in listOf(false, true)) {
+                val message = decorated.render(name, locale, true, installed, true)
+                val lines = plain(message).lines()
+                val row = lines[if (installed) 8 else 7]
+                assertEquals(10, lines.size)
+                assertTrue(row.contains(name), "Do not remove or truncate long player names")
+                assertTrue(
+                    row.first() in '\uE010'..'\uE025',
+                    "Maximum-width name must leave positive centering space: $locale",
+                )
+                assertEquals(if (installed) 3 else 4, nodes(message).mapNotNull { url(it) }.size)
+            }
+        }
     }
 
     @Test
