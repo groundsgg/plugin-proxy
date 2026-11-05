@@ -37,6 +37,7 @@ constructor(
 ) {
     private enum class Copy(override val id: String) : MessageKey {
         GREETING("welcome.greeting"),
+        COMPACT_GREETING("welcome.greeting.compact"),
         VOICE("welcome.voice"),
         INSTALL("welcome.install"),
     }
@@ -52,7 +53,7 @@ constructor(
         val decoratedLogo = decoratedLogoEnabled && logoReady && iconsReady
         val brand =
             if (decoratedLogo)
-                Component.text(WelcomeGlyphs.LOGO.toString())
+                Component.text(WelcomeGlyphs.LOGO_TEXT)
                     .font(WelcomeGlyphs.FONT)
                     .color(TextColor.color(0xFFFFFF))
             else if (logoReady)
@@ -61,26 +62,28 @@ constructor(
                     .color(TextColor.color(0xFFFFFF))
             else Component.text("GROUNDS", GOLD, TextDecoration.BOLD)
         val result = Component.text().font(Key.key("minecraft:default"))
-        // The tall wordmark needs two reserved rows; use a third when voice help is absent.
-        // Together with the footer this keeps every bitmap inside the chat background.
+        // At height56/ascent50, row5 starts the mosaic at y2 and ends at y58.
+        // The compact social row7 starts its icons at y59, avoiding overlap.
         val leadingRows =
             when {
-                decoratedLogo -> if (voiceInstalled) 4 else 3
+                decoratedLogo -> if (voiceInstalled) 6 else 5
                 logoReady -> if (voiceInstalled) 3 else 2
                 else -> 1
             }
         repeat(leadingRows) { result.appendNewline() }
         result.append(WelcomeLayout.center(brand, logoReady)).appendNewline()
         if (logoReady) result.appendNewline()
-        result
-            .append(
-                WelcomeLayout.center(
-                    messages.render(Copy.GREETING, locale, "player" to playerName),
-                    logoReady,
+        if (!decoratedLogo) {
+            result
+                .append(
+                    WelcomeLayout.center(
+                        messages.render(Copy.GREETING, locale, "player" to playerName),
+                        logoReady,
+                    )
                 )
-            )
-            .appendNewline()
-            .appendNewline()
+                .appendNewline()
+                .appendNewline()
+        }
         val community =
             Component.empty()
                 .append(
@@ -104,7 +107,14 @@ constructor(
                 .append(
                     communityLink(WelcomeGlyphs.SHOP, "Shop", links.shop, iconsReady && logoReady)
                 )
-        result.append(WelcomeLayout.center(community, logoReady))
+        val communityRow =
+            if (decoratedLogo)
+                Component.empty()
+                    .append(messages.render(Copy.COMPACT_GREETING, locale))
+                    .append(Component.text("  "))
+                    .append(community)
+            else community
+        result.append(WelcomeLayout.center(communityRow, logoReady))
         if (!voiceInstalled) {
             result
                 .appendNewline()

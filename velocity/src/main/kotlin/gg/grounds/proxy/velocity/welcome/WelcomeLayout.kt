@@ -14,10 +14,10 @@ internal object WelcomeLayout {
     private val defaultFont = Key.key("minecraft:default")
 
     fun center(line: Component, packReady: Boolean): Component {
-        val inset = ((320 - width(line)) / 2).coerceAtLeast(0)
+        val inset = ((320 - width(line)) / 2).coerceAtLeast(0.0)
         val padding =
-            if (packReady) Component.text(TabSpaces.of(inset)).font(TabGlyphs.FONT)
-            else Component.text(" ".repeat(inset / 4)).font(defaultFont)
+            if (packReady) Component.text(TabSpaces.of(inset.toInt())).font(TabGlyphs.FONT)
+            else Component.text(" ".repeat(inset.toInt() / 4)).font(defaultFont)
         // Padding is a sibling so it cannot inherit a link target or tint the bitmap.
         return Component.empty().append(padding).append(line)
     }
@@ -26,7 +26,7 @@ internal object WelcomeLayout {
         component: Component,
         inheritedFont: Key = defaultFont,
         inheritedBold: Boolean = false,
-    ): Int {
+    ): Double {
         val font = component.font() ?: inheritedFont
         val bold =
             when (component.decoration(TextDecoration.BOLD)) {
@@ -37,14 +37,18 @@ internal object WelcomeLayout {
         val own =
             (component as? TextComponent)?.content()?.sumOf { ch ->
                 when {
-                    font == TabGlyphs.FONT && ch == TabGlyphs.LOGO -> TabGlyphs.LOGO_ADVANCE
-                    font == WelcomeGlyphs.FONT && ch == WelcomeGlyphs.LOGO ->
-                        WelcomeGlyphs.LOGO_ADVANCE
-                    font == WelcomeGlyphs.FONT && ch == WelcomeGlyphs.SHOP -> 13
-                    font == WelcomeGlyphs.FONT && ch in '\uE400'..'\uE401' -> 14
-                    else -> advance(ch) + if (bold && ch != ' ') 1 else 0
+                    font == TabGlyphs.FONT && ch == TabGlyphs.LOGO ->
+                        TabGlyphs.LOGO_ADVANCE.toDouble()
+                    font == WelcomeGlyphs.FONT &&
+                        (ch == WelcomeGlyphs.LOGO || ch == WelcomeGlyphs.LOGO_RIGHT) ->
+                        WelcomeGlyphs.LOGO_SLICE_ADVANCE
+                    font == WelcomeGlyphs.FONT && ch == WelcomeGlyphs.LOGO_JOIN ->
+                        WelcomeGlyphs.LOGO_JOIN_ADVANCE
+                    font == WelcomeGlyphs.FONT && ch == WelcomeGlyphs.SHOP -> 13.0
+                    font == WelcomeGlyphs.FONT && ch in '\uE400'..'\uE401' -> 14.0
+                    else -> (advance(ch) + if (bold && ch != ' ') 1 else 0).toDouble()
                 }
-            } ?: 0
+            } ?: 0.0
         return own + component.children().sumOf { width(it, font, bold) }
     }
 

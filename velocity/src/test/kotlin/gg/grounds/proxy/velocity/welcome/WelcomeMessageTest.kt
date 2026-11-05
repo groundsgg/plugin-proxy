@@ -76,7 +76,22 @@ class WelcomeMessageTest {
                 val message = decorated.render("Alex", locale, true, installed, true)
                 val lines = plain(message).lines()
                 assertEquals(10, lines.size)
-                assertTrue(lines[if (installed) 4 else 3].contains('\uE403'))
+                val brandRow = if (installed) 6 else 5
+                val linksRow = if (installed) 8 else 7
+                assertTrue(lines[brandRow].contains("\uE403\uE405\uE404"))
+                assertTrue(lines[linksRow].contains("Discord"))
+                assertFalse(
+                    plain(message).contains("Alex"),
+                    "Compact greeting leaves room for links",
+                )
+                val logoTop = brandRow * 9 + 7 - 50
+                val logoBottom = logoTop + 56
+                val iconsTop = linksRow * 9 + 7 - 11
+                assertTrue(logoTop >= 0)
+                assertTrue(logoBottom <= iconsTop, "Logo must not overlap social icons")
+                assertTrue(iconsTop + 14 <= 90, "Icons must remain inside chat background")
+
+                assertTrue(lines[if (installed) 6 else 5].contains('\uE403'))
                 assertTrue(
                     nodes(message).any {
                         it.font() == Key.key("grounds:welcome") && plain(it).contains('\uE403')

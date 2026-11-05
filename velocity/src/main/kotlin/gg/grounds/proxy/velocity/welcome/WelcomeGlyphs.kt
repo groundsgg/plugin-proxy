@@ -8,7 +8,13 @@ internal object WelcomeGlyphs {
     const val TIKTOK = '\uE401'
     const val SHOP = '\uE402'
     const val LOGO = '\uE403'
-    const val LOGO_ADVANCE = 86 // 512x241 bitmap at height40, rounded advance plus1px glyph gap.
+    const val LOGO_RIGHT = '\uE404'
+    const val LOGO_JOIN = '\uE405'
+    const val LOGO_TEXT = "\uE403\uE405\uE404"
+    const val LOGO_SLICE_ADVANCE = 60.0
+    // Each 256x241 cell renders 56*256/241 pixels wide; remove native rounded glyph spacing.
+    const val LOGO_JOIN_ADVANCE = -0.51452282157676
+    const val LOGO_ADVANCE = 119.48547717842324
 
     /** HUD readiness is sufficient only if every approved HUD pack contains these glyphs. */
     fun supportedBy(hudPacks: Set<String>, welcomePacks: Set<String>): Boolean =
