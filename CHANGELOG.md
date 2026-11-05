@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.0](https://github.com/groundsgg/plugin-proxy/compare/v2.11.1...v2.12.0) (2026-11-05)
+
+
+### Features
+
+* add a branded join welcome with voice-chat guidance ([#120](https://github.com/groundsgg/plugin-proxy/issues/120)) ([64a38a4](https://github.com/groundsgg/plugin-proxy/commit/64a38a416faeea991593cb20a56ee67b90402450))
+* deliver portal announcements through every proxy ([#118](https://github.com/groundsgg/plugin-proxy/issues/118)) ([964fb1f](https://github.com/groundsgg/plugin-proxy/commit/964fb1f23b18ac3d0ffb1e542504b26fec039a43))
+
 ## [2.11.1](https://github.com/groundsgg/plugin-proxy/compare/v2.11.0...v2.11.1) (2026-10-31)
 
 
