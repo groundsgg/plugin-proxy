@@ -76,12 +76,19 @@ class WelcomeMessageTest {
                 val message = decorated.render("Alex", locale, true, installed, true)
                 val lines = plain(message).lines()
                 assertEquals(10, lines.size)
-                val brandRow = if (installed) 6 else 5
+                val brandRow = if (installed) 5 else 4
                 val linksRow = if (installed) 8 else 7
                 assertTrue(lines[brandRow].contains("\uE403\uE405\uE404"))
                 assertTrue(lines[linksRow].contains("Discord"))
                 assertTrue(lines.last().isEmpty(), "Reserve a blank row below the final sentence")
-                assertTrue(lines[linksRow].contains("Alex"), "Keep the personalized greeting")
+                val greetingRow = if (installed) 6 else 5
+                assertTrue(lines[greetingRow].contains("Alex"), "Keep the personalized greeting")
+                assertFalse(
+                    lines[greetingRow].contains("Discord"),
+                    "Social links have their own row",
+                )
+                assertFalse(lines[linksRow].contains("Alex"), "Keep the social row independent")
+                assertTrue(lines[greetingRow + 1].isEmpty(), "Leave room above tall icons")
                 if (!installed) {
                     assertTrue(lines[8].contains(" • "), "Voice copy follows the social row")
                     assertTrue(
@@ -89,14 +96,15 @@ class WelcomeMessageTest {
                         "The full icon bitmap ends before adjacent voice text",
                     )
                 }
-                val logoTop = brandRow * 9 + 7 - 50
-                val logoBottom = logoTop + 56
+                val logoTop = brandRow * 9 + 7 - 41
+                val logoBottom = logoTop + 42
                 val iconsTop = linksRow * 9 + 7 - 12
                 assertTrue(logoTop >= 0)
+                assertTrue(logoBottom < greetingRow * 9, "Logo must end before greeting ink")
                 assertTrue(logoBottom <= iconsTop, "Logo must not overlap social icons")
                 assertTrue(iconsTop + 14 <= 90, "Icons must remain inside chat background")
 
-                assertTrue(lines[if (installed) 6 else 5].contains('\uE403'))
+                assertTrue(lines[if (installed) 5 else 4].contains('\uE403'))
                 assertTrue(
                     nodes(message).any {
                         it.font() == Key.key("grounds:welcome") && plain(it).contains('\uE403')
@@ -120,7 +128,7 @@ class WelcomeMessageTest {
     private fun iconsTopForRow(row: Int) = row * 9 + 7 - 12
 
     @Test
-    fun `personalized compact greeting fits maximum width names in every locale`() {
+    fun `personalized separate greeting fits maximum width names in every locale`() {
         val decorated =
             WelcomeMessage(
                 Translations.forBundle("gg.grounds.proxy.messages", javaClass.classLoader),
@@ -132,7 +140,7 @@ class WelcomeMessageTest {
             for (installed in listOf(false, true)) {
                 val message = decorated.render(name, locale, true, installed, true)
                 val lines = plain(message).lines()
-                val row = lines[if (installed) 8 else 7]
+                val row = lines[if (installed) 6 else 5]
                 assertEquals(10, lines.size)
                 assertTrue(row.contains(name), "Do not remove or truncate long player names")
                 assertTrue(

@@ -61,29 +61,27 @@ constructor(
                     .color(TextColor.color(0xFFFFFF))
             else Component.text("GROUNDS", GOLD, TextDecoration.BOLD)
         val result = Component.text().font(Key.key("minecraft:default"))
-        // At height56/ascent50, row5 starts the mosaic at y2 and ends at y58.
-        // The compact social row7 starts its icons at y58, avoiding overlap.
+        // At height42/ascent41, row4 starts the mosaic at y2 and ends at y44.
+        // The greeting starts at y45; the separate social row7 starts its icons at y58.
         val leadingRows =
             when {
-                decoratedLogo -> if (voiceInstalled) 6 else 5
+                decoratedLogo -> if (voiceInstalled) 5 else 4
                 logoReady -> if (voiceInstalled) 3 else 2
                 else -> 1
             }
         repeat(leadingRows) { result.appendNewline() }
         result.append(WelcomeLayout.center(brand, logoReady)).appendNewline()
-        if (logoReady) result.appendNewline()
-        if (!decoratedLogo) {
-            result
-                .append(
-                    WelcomeLayout.center(
-                        messages.render(Copy.GREETING, locale, "player" to playerName),
-                        logoReady,
-                    )
+        if (logoReady && !decoratedLogo) result.appendNewline()
+        result
+            .append(
+                WelcomeLayout.center(
+                    messages.render(Copy.GREETING, locale, "player" to playerName),
+                    logoReady,
                 )
-                .appendNewline()
-                .appendNewline()
-        }
-        val communityGap = Component.text(if (decoratedLogo) " " else "   ")
+            )
+            .appendNewline()
+            .appendNewline()
+        val communityGap = Component.text("   ")
         val community =
             Component.empty()
                 .append(
@@ -107,14 +105,7 @@ constructor(
                 .append(
                     communityLink(WelcomeGlyphs.SHOP, "Shop", links.shop, iconsReady && logoReady)
                 )
-        val communityRow =
-            if (decoratedLogo)
-                Component.empty()
-                    .append(messages.render(Copy.GREETING, locale, "player" to playerName))
-                    .append(Component.space())
-                    .append(community)
-            else community
-        result.append(WelcomeLayout.center(communityRow, logoReady))
+        result.append(WelcomeLayout.center(community, logoReady))
         if (!voiceInstalled) {
             result.appendNewline()
             // The compact pack aligns the full icon bitmap above the following normal text row;

@@ -1,8 +1,9 @@
-# Larger welcome logo
+# Welcome layout with separate community links
 
-The user chose a compact text area so everything remains visible in closed chat.
-Use the original 512x241 artwork as two 256x241 bitmap glyphs. Render at height 56, ascent 50, with exact fractional spacing between slices. Each glyph must fit the native 256x256 atlas.
+The user approved a smaller logo to keep the greeting, community links, voice hint and blank footer fully visible in the default ten-row chat. Keep the original 512x241 artwork and two 256x241 native cells; render the logo at height42/ascent41 with exact fractional join spacing.
 
-The decorated welcome uses a personalized localized greeting and the existing three independently clickable social links on one centered line. The player name remains present, with reduced spaces between social links. The full icon bitmap uses ascent 12 so voice copy can follow on the adjacent row; the blank footer stays below that copy. Voice installation remains a separate full sentence and sand bullet, only for clients without the mod. Preserve fallback rendering, colors, links and multi-proxy behavior.
+Center each row separately. The greeting retains the player name, and Discord/TikTok/Shop follow on their own row with three-space gaps. Preserve Mini-CD colors, independent click targets, conditional voice installation copy, the sand bullet and existing fallback.
 
-Alternatives: a larger single glyph exceeds the native atlas; a taller message clips in closed chat. The user selected compact copy. Implementation choice: 56px height gives 40 percent more size and fits ten rows with the existing 14px icons.
+Without the voice mod, the logo is on row4 (ink bounds y2–44), greeting row5 (text y45), social icons row7 (bitmap y58–72), voice row8 (text y72), and blank footer row9. With the mod installed, shift the logo, greeting and socials down one row and omit voice copy, retaining footer row9. Social icon height14/ascent12 remains unchanged.
+
+A taller twelve-row block with the large56px logo was considered and rejected because it clips in closed chat. The chosen42px logo retains higher-resolution source artwork.
