@@ -38,6 +38,8 @@ import gg.grounds.proxy.velocity.command.OnlineCommand
 import gg.grounds.proxy.velocity.command.ProxyCommand
 import gg.grounds.proxy.velocity.command.ProxyDebugCommand
 import gg.grounds.proxy.velocity.command.RegionCommand
+import gg.grounds.proxy.velocity.command.WhereAmICommand
+import gg.grounds.proxy.velocity.command.WhereAmIGlyphs
 import gg.grounds.proxy.velocity.handler.NatsHandler
 import gg.grounds.proxy.velocity.listener.LobbyCountsListener
 import gg.grounds.proxy.velocity.listener.ProxyHopListener
@@ -56,6 +58,10 @@ import gg.grounds.proxy.velocity.tab.PlayerDisplayQueryImpl
 import gg.grounds.proxy.velocity.tab.TabList
 import gg.grounds.proxy.velocity.tab.TabParties
 import gg.grounds.proxy.velocity.tab.VoicePresences
+import gg.grounds.proxy.velocity.welcome.WelcomeGlyphs
+import gg.grounds.proxy.velocity.welcome.WelcomeLinks
+import gg.grounds.proxy.velocity.welcome.WelcomeListener
+import gg.grounds.proxy.velocity.welcome.WelcomeMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.nats.client.Subscription
 import java.net.URI
@@ -234,6 +240,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private var countSubscription: Subscription? = null
     private var metrics: ProxyMetrics? = null
     private var tabList: TabList? = null
+    private var welcome: WelcomeListener? = null
     private var bedrockRoster: BedrockRoster? = null
     private val tabParties = TabParties()
     private val voicePresences = VoicePresences()
@@ -308,6 +315,40 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         proxy.channelRegistrar.register(lobbyIdentifier)
         proxy.eventManager.register(this, LobbyCountsListener(lobbyIdentifier, service, logger))
 
+        val pixelIconsEnabled = WelcomeGlyphs.enabled(System.getenv())
+        val welcomeListener =
+            WelcomeListener(
+                messages,
+                WelcomeMessage(
+                    messages,
+                    WelcomeLinks.from(),
+                    decoratedLogoEnabled = WelcomeGlyphs.decoratedLogoEnabled(System.getenv()),
+                ),
+                schedule = { task -> proxy.scheduler.buildTask(this, task).schedule() },
+                logoReady = { player ->
+                    ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
+                        ?.appearanceOf(player.uniqueId)
+                        ?.ready == true
+                },
+                iconsReady = { player ->
+                    pixelIconsEnabled &&
+                        ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
+                            ?.appearanceOf(player.uniqueId)
+                            ?.ready == true
+                },
+                legacySchedule = { task ->
+                    proxy.scheduler
+                        .buildTask(this, task)
+                        .delay(WelcomeListener.LEGACY_GRACE_SECONDS, TimeUnit.SECONDS)
+                        .schedule()
+                },
+            )
+        welcome = welcomeListener
+        proxy.channelRegistrar.register(
+            MinecraftChannelIdentifier.from(WelcomeListener.VOICE_CHANNEL)
+        )
+        proxy.eventManager.register(this, welcomeListener)
+
         // The network-wide player count, pushed every few seconds. Subscribed once for the whole
         // proxy rather than per player: it is a property of the network, not of anybody's session.
         countSubscription =
@@ -375,6 +416,23 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         proxy.commandManager.register("proxydebug", ProxyDebugCommand(messages))
 
         val proxyId = System.getenv("PROXY_ID").orEmpty()
+        val whereamiIconsEnabled = WhereAmIGlyphs.enabled(System.getenv())
+        proxy.commandManager.register(
+            "whereami",
+            WhereAmICommand(
+                currentRegion = {
+                    System.getenv("REGION")?.trim()?.takeIf(String::isNotEmpty) ?: region()
+                },
+                currentProxy = { proxyId },
+                messages = messages,
+                iconsReady = { player ->
+                    whereamiIconsEnabled &&
+                        ProxyServiceRegistry.get(PlayerHudAppearanceQuery::class.java)
+                            ?.appearanceOf(player.uniqueId)
+                            ?.ready == true
+                },
+            ),
+        )
         val hops =
             ProxyHopListener(
                 this,
@@ -637,6 +695,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
 
     @Subscribe
     fun onShutdown(event: ProxyShutdownEvent) {
+        welcome?.close()
         announcementSync?.close()
         announcementPoll?.cancel()
         announcementTick?.cancel()

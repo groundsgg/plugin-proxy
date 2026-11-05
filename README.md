@@ -20,6 +20,53 @@ A Velocity proxy only knows its own players. Ask it for `dahendriik` while they 
 
 Local first, always — a player on this proxy is already in memory and costs nothing to find.
 
+## Join welcome
+
+A fresh network join receives a single welcome block with the large 26px Grounds
+wordmark used by the network HUD, the player's name, and independent Discord,
+TikTok and Shop links in one horizontal row. The resource pack supplies sharp
+pixel-art brand icons (Discord, TikTok and a shopping bag); both icon and label
+open the link. Modern clients receive it after the first backend connection and
+one acknowledgement round trip, with no fixed welcome delay. Required packs have
+already loaded during configuration. A `grounds:welcome_ready` cookie request is
+queued after JoinGame so client join-time mod announcements precede its response.
+Clients without a verified HUD font pack see the
+Grounds name instead of an unsupported glyph.
+
+Discord defaults to `https://grnds.link/discord`, matching the lobby bossbar.
+TikTok (`https://example.com/grounds/tiktok`) and Shop
+(`https://example.com/grounds/shop`) are intentional placeholders. Replace these
+with `WELCOME_TIKTOK_URL` and `WELCOME_SHOP_URL`; `WELCOME_DISCORD_URL` can override
+Discord as well. Keep these values consistent across proxy deployments.
+
+Clients that have not announced Simple Voice Chat receive a short description
+and a link to the official installation guide, as a complete localized sentence
+followed by the installation action. Client channel registration or a
+voice handshake suppresses that section even if voice is disabled or UDP cannot
+connect. Handshake messages continue to the backend unchanged. Server switches
+do not repeat the welcome. A connection-scoped `grounds:welcome` client cookie
+carries whether the block was delivered across proxy/region transfers: an early
+redirect still gets its first welcome at the destination. Fresh logins reset
+the marker before preferred-region routing. Disconnect and shutdown cancel
+pending delivery.
+
+Before rollout, check a fresh join on each proxy, a backend switch, and a proxy
+transfer. Check clients with the mod absent, present but disabled, and present
+with UDP blocked; only the first should get installation help. Also check a
+declined resource pack and a disconnect/reconnect before the ready-cookie reply.
+Only legacy protocols before 1.20.5 retain the old five-second negotiation grace.
+
+The installation observers capture only an in-memory bit at maximum synchronous
+priority, then explicitly hand off to an asynchronous EventTask. This preserves
+packet order before the ready reply without moving other plugins' handlers onto
+the packet thread. Before changing the Velocity runtime, verify these dispatcher
+semantics against its actual JAR:
+
+```sh
+velocity/src/test/scripts/verify-welcome-dispatch.sh \
+  velocity/build/libs/plugin-proxy-velocity.jar /path/to/deployed-velocity.jar
+```
+
 ## How the pieces fit
 
 ```
@@ -121,6 +168,20 @@ allowed can still _show_ the MOTD; `/motd set` then reports the refusal instead 
 
 ## Tab footer and diagnostics
 
+`/whereami` is available to every player and shows their current region, full proxy
+ID and current backend ID in one indented Grounds chat block. A short explanation
+asks players to use these details when contacting support. Hover and click the
+proxy or server ID to copy it. Missing values appear as `—`. The command reads the
+current connection on whichever proxy handles it, so backend switches appear
+immediately without a presence-service lookup. Region uses `REGION`, falling back
+to the existing `CONTINENT`/region code when the datacentre is not configured.
+All text is localized in English, German, French and Spanish.
+The heading and body follow the Minecraft Mini-CD (warm white, sand and cyan
+copy actions). Three first-party pixel icons in `grounds:connection` appear only
+with verified HUD readiness and a compatible `WHEREAMI_FONT_PACK_SHA1S` allowlist;
+otherwise the indented text labels remain. The icons use an additive platform
+pack font and do not replace vanilla fonts or the existing welcome graphics.
+
 The footer is one localized status line, for example `Lobby 2 • 42 players online • 17 ms`.
 The server number is its deterministic position among the currently registered servers of the
 same kind, not a pod identifier. All proxies with the same discovery inventory show the same
@@ -215,3 +276,7 @@ maintenance is active. New maintenance drafts default to an empty override.
 ```
 
 Published on tag as `gg.grounds:plugin-proxy-api` (consume this) and `plugin-proxy-velocity`, and as `ghcr.io/groundsgg/plugin-proxy` — the image carries the shaded JAR at `/jar/plugin.jar` for the `plugin-velocity-jar` Helm chart.
+
+Welcome bitmap icons use `grounds:welcome` U+E400/U+E401/U+E402. Set `WELCOME_FONT_PACK_SHA1S` to the verified platform-pack hashes containing these glyphs and restrict `HUD_FONT_PACK_SHA1S` to that same set. Icons remain disabled unless every HUD-ready hash is covered; unknown packs show plain labels. Existing chat, sidebar and HUD pack allowlists must include a newly activated platform pack as appropriate.
+
+The welcome can use the original full Grounds logo with floating stones. Only enable WELCOME_LOGO_PACK_SHA1S for HUD-approved hashes containing U+E403; otherwise the existing compact wordmark remains. Its40px artwork reserves more rows; with Voice help the block ends in normal-height text and still fits ten closed-chat rows. Voice copy and Install use the same sand-coloured bullet as the bossbar.
