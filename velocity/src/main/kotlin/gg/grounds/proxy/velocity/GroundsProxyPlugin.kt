@@ -14,11 +14,13 @@ import com.velocitypowered.api.event.player.ServerPreConnectEvent
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
 import com.velocitypowered.api.event.proxy.ProxyPingEvent
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
+import com.velocitypowered.api.network.ProtocolVersion
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier
 import com.velocitypowered.api.scheduler.ScheduledTask
+import com.velocitypowered.api.util.ServerLink
 import gg.grounds.BuildInfo
 import gg.grounds.i18n.Translations
 import gg.grounds.presentation.VelocitySystemMessages
@@ -73,6 +75,7 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import org.slf4j.Logger
@@ -241,6 +244,18 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
     private var metrics: ProxyMetrics? = null
     private var tabList: TabList? = null
     private var welcome: WelcomeListener? = null
+    private val welcomeLinks = WelcomeLinks.from()
+    private val serverLinks = run {
+        val discord =
+            runCatching { URI.create(welcomeLinks.discord.trim()) }
+                .getOrNull()
+                ?.takeIf { it.host != null && it.scheme?.lowercase() in listOf("https", "http") }
+                ?.toString() ?: WelcomeLinks().discord
+        listOf(
+            ServerLink.serverLink(ServerLink.Type.WEBSITE, "https://grounds.gg"),
+            ServerLink.serverLink(Component.text("Discord"), discord),
+        )
+    }
     private var bedrockRoster: BedrockRoster? = null
     private val tabParties = TabParties()
     private val voicePresences = VoicePresences()
@@ -321,7 +336,7 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
                 messages,
                 WelcomeMessage(
                     messages,
-                    WelcomeLinks.from(),
+                    welcomeLinks,
                     decoratedLogoEnabled = WelcomeGlyphs.decoratedLogoEnabled(System.getenv()),
                 ),
                 schedule = { task -> proxy.scheduler.buildTask(this, task).schedule() },
@@ -691,6 +706,10 @@ constructor(private val proxy: ProxyServer, private val logger: Logger) {
         }
         announcementController?.refreshAll()
         tabList?.refresh(event.player)
+        // Backend links sent during configuration can replace the network links.
+        if (event.player.protocolVersion >= ProtocolVersion.MINECRAFT_1_21) {
+            event.player.setServerLinks(serverLinks)
+        }
     }
 
     @Subscribe
