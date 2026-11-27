@@ -21,13 +21,13 @@ dependencies {
     // The tab list header and footer are player-facing text, so they come from a bundle and are
     // drawn in the design tokens, like every other line the network shows a player.
     implementation("gg.grounds:library-i18n:0.5.0")
-    implementation("io.nats:jnats:2.26.4")
+    implementation("io.nats:jnats:2.27.0")
 
     // The metrics endpoint. Micrometer rather than a hand-written exposition format, because its
     // JVM binders publish the same names the services and the game servers do — one Grafana query
     // then covers a proxy, a game server and a service. Shaded into the plugin jar like jnats.
     // HTTP is the JDK's own server, so nothing else is added.
-    implementation("io.micrometer:micrometer-registry-prometheus:1.17.2")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.18.0")
     // The transport for the service-config channel. Shaded by gRPC itself, so it does not fight
     // with the Netty the proxy runs on.
 
