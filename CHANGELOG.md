@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.13.0](https://github.com/groundsgg/plugin-proxy/compare/v2.12.0...v2.13.0) (2026-11-27)
+
+
+### Features
+
+* expose system badge readiness on the proxy ([#128](https://github.com/groundsgg/plugin-proxy/issues/128)) ([fb7371c](https://github.com/groundsgg/plugin-proxy/commit/fb7371c88170b6e32d4b281193a0a72951ff1e63))
+* **proxy:** publish Grounds server links ([#126](https://github.com/groundsgg/plugin-proxy/issues/126)) ([8eda87a](https://github.com/groundsgg/plugin-proxy/commit/8eda87a56d14a15dd404d698d8dd623396faaade))
+
 ## [2.12.0](https://github.com/groundsgg/plugin-proxy/compare/v2.11.1...v2.12.0) (2026-11-05)
 
 
