@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.1](https://github.com/groundsgg/plugin-proxy/compare/v2.13.0...v2.13.1) (2026-11-28)
+
+
+### Bug Fixes
+
+* address players directly in proxy feedback ([#129](https://github.com/groundsgg/plugin-proxy/issues/129)) ([4cc2e39](https://github.com/groundsgg/plugin-proxy/commit/4cc2e391d8c88d533531a7ed1c7e7a82a8190c0f))
+
 ## [2.13.0](https://github.com/groundsgg/plugin-proxy/compare/v2.12.0...v2.13.0) (2026-11-27)
 
 
