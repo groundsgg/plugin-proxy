@@ -49,7 +49,7 @@ class ProxyBundleTest {
             )
 
         assertEquals(
-            "Unknown region '<red>boom</red>'. Available: eu, <click:run_command:/op>x</click>",
+            "You cannot choose '<red>boom</red>'. Your available regions: eu, <click:run_command:/op>x</click>",
             PlainTextComponentSerializer.plainText().serialize(rendered),
         )
     }
